@@ -331,7 +331,7 @@ function renderApp() {
   renderSidebar();
   renderShellHeader();
   renderCurrentRoute();
-  setStatus("Sistema pronto para uso");
+  setStatus("");
 }
 
 function refreshSnapshot(snapshot) {
