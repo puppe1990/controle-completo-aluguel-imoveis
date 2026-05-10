@@ -1,3 +1,9 @@
+import {
+  buildListingView,
+  createInitialListingState,
+} from "./listing-state.js";
+import { translateReceivableStatus } from "./receivable-status-label.js";
+
 function currency(value = 0) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -5,7 +11,7 @@ function currency(value = 0) {
   }).format(Number(value));
 }
 
-function statusPill(status) {
+function statusPill(status, label = status) {
   const map = {
     paid: "bg-emerald-100 text-emerald-800",
     pending: "bg-amber-100 text-amber-900",
@@ -16,7 +22,7 @@ function statusPill(status) {
     inactive: "bg-stone-100 text-stone-700",
     closed: "bg-stone-900 text-white",
   };
-  return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${map[status] ?? "bg-stone-100 text-stone-700"}">${status}</span>`;
+  return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${map[status] ?? "bg-stone-100 text-stone-700"}">${label}</span>`;
 }
 
 function escapeHtml(value = "") {
@@ -62,6 +68,174 @@ function listPageSection(title, description, content, primaryAction, route) {
     content,
     listSectionActions(primaryAction, renderReportExportActions(route))
   );
+}
+
+function listingSelectOptions(options, selectedValue) {
+  return options
+    .map(
+      (option) => `
+        <option value="${escapeHtml(option.value)}" ${selectedOption(selectedValue, option.value)}>
+          ${escapeHtml(option.label)}
+        </option>
+      `
+    )
+    .join("");
+}
+
+function listingSummary(view) {
+  return `
+    <div class="listing-summary">
+      <strong>${view.filteredItems}</strong> de <strong>${view.totalItems}</strong> registro(s)
+    </div>
+  `;
+}
+
+function uniqueListingSearchOptions(values) {
+  return [...new Set(values.filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "pt-BR"))
+    .map(
+      (value) =>
+        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+    )
+    .join("");
+}
+
+function listingSearchOptions(route, rows) {
+  if (route === "owners" || route === "tenants") {
+    return uniqueListingSearchOptions(
+      rows.flatMap((row) => [row.name, row.document, row.phone, row.email])
+    );
+  }
+  if (route === "properties") {
+    return uniqueListingSearchOptions(
+      rows.flatMap((row) => [
+        row.code,
+        row.title,
+        row.owner_name,
+        row.city,
+        row.state,
+      ])
+    );
+  }
+  if (route === "contracts") {
+    return uniqueListingSearchOptions(
+      rows.flatMap((row) => [
+        row.property_code,
+        row.property_title,
+        row.tenant_name,
+        row.start_date,
+        row.end_date,
+      ])
+    );
+  }
+  return uniqueListingSearchOptions(
+    rows.flatMap((row) => [
+      row.reference_month,
+      row.property_code,
+      row.property_title,
+      row.tenant_name,
+      row.due_date,
+    ])
+  );
+}
+
+function listingToolbar(route, view, rows) {
+  return `
+    <div class="listing-toolbar">
+      <label class="field-block listing-toolbar__search">
+        <span class="field-label">Busca</span>
+        <div
+          class="search-select"
+          data-searchable-select
+          data-searchable-free-text="true"
+          data-free-text-value="${escapeHtml(view.activeSearch)}"
+        >
+          <input
+            class="field search-select__input"
+            data-searchable-input
+            data-listing-search="${route}"
+            data-search-placeholder="${escapeHtml(view.searchPlaceholder)}"
+            type="search"
+            autocomplete="off"
+            placeholder="${escapeHtml(view.searchPlaceholder)}"
+            value="${escapeHtml(view.activeSearch)}"
+          />
+          <div class="search-select__menu" data-searchable-menu></div>
+          <select
+            class="search-select__native"
+            data-searchable-native
+            data-listing-search-native="${route}"
+            tabindex="-1"
+            aria-hidden="true"
+          >
+            <option value=""></option>
+            ${listingSearchOptions(route, rows)}
+          </select>
+        </div>
+      </label>
+      <label class="field-block listing-toolbar__filter">
+        <span class="field-label">${escapeHtml(view.filterLabel)}</span>
+        <select class="field" data-listing-filter="${route}">
+          ${listingSelectOptions(view.filters, view.activeFilter)}
+        </select>
+      </label>
+      <label class="field-block listing-toolbar__sort">
+        <span class="field-label">Ordenacao</span>
+        <select class="field" data-listing-sort="${route}">
+          ${listingSelectOptions(view.sorts, view.activeSort)}
+        </select>
+      </label>
+    </div>
+  `;
+}
+
+function listingPagination(route, view) {
+  if (view.totalPages <= 1) {
+    return "";
+  }
+  return `
+    <div class="listing-pagination">
+      <button
+        class="btn-secondary !px-3 !py-2 text-xs"
+        data-listing-page="${route}"
+        data-page="${view.page - 1}"
+        type="button"
+        ${view.page === 1 ? "disabled" : ""}
+      >
+        Anterior
+      </button>
+      <span class="listing-pagination__status">Pagina ${view.page} de ${view.totalPages}</span>
+      <button
+        class="btn-secondary !px-3 !py-2 text-xs"
+        data-listing-page="${route}"
+        data-page="${view.page + 1}"
+        type="button"
+        ${view.page === view.totalPages ? "disabled" : ""}
+      >
+        Proxima
+      </button>
+    </div>
+  `;
+}
+
+function managedTableSection(
+  route,
+  listingState,
+  title,
+  description,
+  rows,
+  headers,
+  body,
+  cta
+) {
+  const view = buildListingView(route, rows, listingState);
+  const content = [
+    listingToolbar(route, view, rows),
+    listingSummary(view),
+    `<div class="table-shell">${crudTable(headers, body(view.rows))}</div>`,
+    listingPagination(route, view),
+  ].join("");
+  return listPageSection(title, description, content, cta, route);
 }
 
 function backButton(route) {
@@ -167,6 +341,42 @@ export function renderReportExportActions(route) {
   `;
 }
 
+export function renderOwnerPerformanceTable(rows) {
+  if (!rows.length) {
+    return emptyState("Sem consolidado por proprietario.");
+  }
+  return `
+    <div class="table-shell">
+      <table class="min-w-full text-left text-sm">
+        <thead class="text-stone-500">
+          <tr class="border-b border-stone-200">
+            <th class="px-3 py-3 font-medium">Proprietario</th>
+            <th class="px-3 py-3 font-medium">Imoveis</th>
+            <th class="px-3 py-3 font-medium">Previsto</th>
+            <th class="px-3 py-3 font-medium">Recebido</th>
+            <th class="px-3 py-3 font-medium">Em atraso</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr class="border-b border-stone-100">
+                  <td class="px-3 py-4 font-medium">${escapeHtml(row.name)}</td>
+                  <td class="px-3 py-4">${row.properties_count}</td>
+                  <td class="px-3 py-4">${currency(row.expected_total)}</td>
+                  <td class="px-3 py-4">${currency(row.received_total)}</td>
+                  <td class="px-3 py-4">${currency(row.overdue_total)}</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function ownerForm(editor) {
   const isEditing = Boolean(editor?.id);
   return `
@@ -221,7 +431,7 @@ function ownerRows(owners) {
     .join("");
 }
 
-function ownersPage(snapshot, editor) {
+function ownersPage(snapshot, editor, listingState) {
   const isEditing = Boolean(editor?.id);
   const formSection = pageSection(
     isEditing ? "Editar proprietario" : "Novo proprietario",
@@ -232,12 +442,15 @@ function ownersPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${listPageSection(
+      ${managedTableSection(
+        "owners",
+        listingState,
         "Lista de proprietarios",
         `${snapshot.owners.length} registro(s) na base`,
-        `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], ownerRows(snapshot.owners))}</div>`,
-        createButton("owners", "Novo proprietario"),
-        "owners"
+        snapshot.owners,
+        ["Nome", "Documento", "Telefone", "E-mail", "Status", ""],
+        ownerRows,
+        createButton("owners", "Novo proprietario")
       )}
       ${formSection}
     </div>
@@ -493,7 +706,34 @@ function contractRows(contracts) {
     .join("");
 }
 
-function contractsPage(snapshot, editor) {
+function receivableRows(receivables) {
+  if (!receivables.length) {
+    return emptyState("Nenhuma conta a receber cadastrada.");
+  }
+  return receivables
+    .map(
+      (row) => `
+        <tr class="border-b border-stone-100">
+          <td class="px-3 py-4">${escapeHtml(row.reference_month)}</td>
+          <td class="px-3 py-4">${escapeHtml(row.property_code)} · ${escapeHtml(row.property_title)}</td>
+          <td class="px-3 py-4">${escapeHtml(row.tenant_name)}</td>
+          <td class="px-3 py-4">${escapeHtml(row.due_date)}</td>
+          <td class="px-3 py-4 font-medium">${currency(row.amount)}</td>
+          <td class="px-3 py-4">${statusPill(row.status_label, translateReceivableStatus(row.status_label))}</td>
+          <td class="px-3 py-4">
+            ${
+              row.status_label === "paid"
+                ? `<button class="btn-secondary receivable-unpay-button !px-3 !py-2 text-xs" data-id="${row.id}" type="button">Cancelar</button>`
+                : `<button class="btn-secondary pay-button !px-3 !py-2 text-xs" data-id="${row.id}" type="button">Registrar pagamento</button>`
+            }
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function contractsPage(snapshot, editor, listingState) {
   const isEditing = Boolean(editor?.id);
   const formSection = pageSection(
     isEditing ? "Editar contrato" : "Novo contrato",
@@ -504,19 +744,22 @@ function contractsPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${listPageSection(
+      ${managedTableSection(
+        "contracts",
+        listingState,
         "Contratos",
         `${snapshot.contracts.length} registro(s) na operacao`,
-        `<div class="table-shell">${crudTable(["Imovel", "Inquilino", "Periodo", "Vencimento", "Valor", "Status", ""], contractRows(snapshot.contracts))}</div>`,
-        createButton("contracts", "Novo contrato"),
-        "contracts"
+        snapshot.contracts,
+        ["Imovel", "Inquilino", "Periodo", "Vencimento", "Valor", "Status", ""],
+        contractRows,
+        createButton("contracts", "Novo contrato")
       )}
       ${formSection}
     </div>
   `;
 }
 
-function propertiesPage(snapshot, editor) {
+function propertiesPage(snapshot, editor, listingState) {
   const isEditing = Boolean(editor?.id);
   const formSection = pageSection(
     isEditing ? "Editar imovel" : "Novo imovel",
@@ -527,19 +770,30 @@ function propertiesPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${listPageSection(
+      ${managedTableSection(
+        "properties",
+        listingState,
         "Portfolio de imoveis",
         `${snapshot.properties.length} unidade(s) administrada(s)`,
-        `<div class="table-shell">${crudTable(["Codigo", "Nome", "Proprietario", "Cidade/UF", "Aluguel", "Status", ""], propertyRows(snapshot.properties))}</div>`,
-        createButton("properties", "Novo imovel"),
-        "properties"
+        snapshot.properties,
+        [
+          "Codigo",
+          "Nome",
+          "Proprietario",
+          "Cidade/UF",
+          "Aluguel",
+          "Status",
+          "",
+        ],
+        propertyRows,
+        createButton("properties", "Novo imovel")
       )}
       ${formSection}
     </div>
   `;
 }
 
-function tenantsPage(snapshot, editor) {
+function tenantsPage(snapshot, editor, listingState) {
   const isEditing = Boolean(editor?.id);
   const formSection = pageSection(
     isEditing ? "Editar inquilino" : "Novo inquilino",
@@ -550,12 +804,15 @@ function tenantsPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${listPageSection(
+      ${managedTableSection(
+        "tenants",
+        listingState,
         "Lista de inquilinos",
         `${snapshot.tenants.length} registro(s) na base`,
-        `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], tenantRows(snapshot.tenants))}</div>`,
-        createButton("tenants", "Novo inquilino"),
-        "tenants"
+        snapshot.tenants,
+        ["Nome", "Documento", "Telefone", "E-mail", "Status", ""],
+        tenantRows,
+        createButton("tenants", "Novo inquilino")
       )}
       ${formSection}
     </div>
@@ -580,20 +837,57 @@ function crudTable(headers, body) {
   `;
 }
 
-export function renderCrudRoute(route, snapshot, editors) {
+export function renderCrudRoute(route, snapshot, editors, listingStates) {
+  const views = listingStates ?? {
+    owners: createInitialListingState("owners"),
+    tenants: createInitialListingState("tenants"),
+    properties: createInitialListingState("properties"),
+    contracts: createInitialListingState("contracts"),
+  };
   if (route === "owners") {
-    return ownersPage(snapshot, editors.owners);
+    return ownersPage(snapshot, editors.owners, views.owners);
   }
   if (route === "tenants") {
-    return tenantsPage(snapshot, editors.tenants);
+    return tenantsPage(snapshot, editors.tenants, views.tenants);
   }
   if (route === "properties") {
-    return propertiesPage(snapshot, editors.properties);
+    return propertiesPage(snapshot, editors.properties, views.properties);
   }
   if (route === "contracts") {
-    return contractsPage(snapshot, editors.contracts);
+    return contractsPage(snapshot, editors.contracts, views.contracts);
   }
   return "";
+}
+
+/**
+ * Renders the receivables list with the shared listing controls.
+ * Example: renderReceivablesRoute(snapshot, viewState)
+ */
+export function renderReceivablesRoute(snapshot, listingState) {
+  const viewState = listingState ?? createInitialListingState("receivables");
+  return `
+    <div class="page-stack">
+      ${managedTableSection(
+        "receivables",
+        viewState,
+        "Contas a receber",
+        "Financeiro",
+        snapshot.receivables,
+        [
+          "Referencia",
+          "Imovel",
+          "Inquilino",
+          "Vencimento",
+          "Valor",
+          "Status",
+          "",
+        ],
+        receivableRows,
+        ""
+      )}
+      ${pageSection("Relatorio por proprietario", "Consolidado", renderOwnerPerformanceTable(snapshot.ownerPerformance))}
+    </div>
+  `;
 }
 
 export function renderCrudFormRoute(route, snapshot, editor) {

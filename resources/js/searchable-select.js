@@ -42,6 +42,10 @@ export function selectedSearchableLabel(options, value) {
   );
 }
 
+function isFreeTextSearchable(container) {
+  return container?.dataset.searchableFreeText === "true";
+}
+
 function searchableParts(container) {
   return {
     input: container.querySelector("[data-searchable-input]"),
@@ -71,6 +75,11 @@ function syncSearchableInput(container) {
   const options = selectOptionsSnapshot(select);
   const selectedLabel = selectedSearchableLabel(options, select.value);
   container.dataset.selectedLabel = selectedLabel;
+  if (isFreeTextSearchable(container)) {
+    input.value = container.dataset.freeTextValue ?? "";
+    input.placeholder = input.dataset.searchPlaceholder || "";
+    return;
+  }
   input.value = selectedLabel;
   input.placeholder = input.dataset.searchPlaceholder || "";
 }
@@ -94,9 +103,11 @@ export function renderSearchableOptions(container, query = "") {
 
 export function openSearchableSelect(container) {
   const { input } = searchableParts(container);
-  input.value = "";
+  input.value = isFreeTextSearchable(container)
+    ? (container.dataset.freeTextValue ?? "")
+    : "";
   input.placeholder = input.dataset.searchPlaceholder || "";
-  renderSearchableOptions(container, "");
+  renderSearchableOptions(container, input.value);
   container.dataset.open = "true";
 }
 
@@ -104,6 +115,11 @@ export function clearSearchableSelection(container) {
   const { input, select } = searchableParts(container);
   select.value = "";
   container.dataset.selectedLabel = "";
+  if (isFreeTextSearchable(container)) {
+    container.dataset.freeTextValue = input.value;
+    input.placeholder = input.dataset.searchPlaceholder || "";
+    return;
+  }
   input.placeholder = input.dataset.searchPlaceholder || "";
 }
 
@@ -112,6 +128,9 @@ export function selectSearchableOption(container, value) {
   const options = selectOptionsSnapshot(select);
   select.value = value;
   container.dataset.selectedLabel = selectedSearchableLabel(options, value);
+  if (isFreeTextSearchable(container)) {
+    container.dataset.freeTextValue = container.dataset.selectedLabel;
+  }
   input.value = container.dataset.selectedLabel;
   input.placeholder = input.dataset.searchPlaceholder || "";
   container.dataset.open = "false";
@@ -120,8 +139,25 @@ export function selectSearchableOption(container, value) {
 
 export function restoreSearchableInput(container) {
   const { input } = searchableParts(container);
+  if (isFreeTextSearchable(container)) {
+    input.value = container.dataset.freeTextValue ?? "";
+    input.placeholder = input.dataset.searchPlaceholder || "";
+    return;
+  }
   input.value = container.dataset.selectedLabel || "";
   input.placeholder = input.dataset.searchPlaceholder || "";
+}
+
+/**
+ * Stores the current free-text value for searchable inputs that are not bound
+ * to a strict selection.
+ * Example: setSearchableFreeTextValue(container, "Ana")
+ */
+export function setSearchableFreeTextValue(container, value) {
+  if (!isFreeTextSearchable(container)) {
+    return;
+  }
+  container.dataset.freeTextValue = String(value ?? "");
 }
 
 export function enhanceSearchableSelects(root = document) {

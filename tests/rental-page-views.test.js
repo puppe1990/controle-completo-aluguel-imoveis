@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   renderCrudFormRoute,
   renderCrudRoute,
+  renderReceivablesRoute,
   renderReportExportActions,
 } from "../resources/js/rental-page-views.js";
 
@@ -96,5 +97,40 @@ describe("rental-page-views", () => {
       expect(html).toContain('class="section-actions__primary"');
       expect(html).toContain('class="section-actions__secondary"');
     });
+  });
+
+  it("renders listing controls for CRUD and receivables routes", () => {
+    const snapshot = {
+      owners: [{ id: 1, name: "Ana", document: "123", phone: "", email: "" }],
+      tenants: [],
+      properties: [],
+      contracts: [],
+      receivables: [
+        {
+          id: 5,
+          reference_month: "2026-01",
+          property_code: "APT-1",
+          property_title: "Apartamento 1",
+          tenant_name: "Bruno",
+          due_date: "2026-01-10",
+          amount: 1200,
+          status_label: "pending",
+        },
+      ],
+      ownerPerformance: [],
+    };
+
+    const ownersHtml = renderCrudRoute("owners", snapshot, {});
+    const receivablesHtml = renderReceivablesRoute(snapshot);
+
+    expect(ownersHtml).toContain('data-listing-search="owners"');
+    expect(ownersHtml).toContain('data-searchable-free-text="true"');
+    expect(ownersHtml).toContain('data-listing-filter="owners"');
+    expect(ownersHtml).toContain('data-listing-sort="owners"');
+    expect(receivablesHtml).toContain('data-listing-search="receivables"');
+    expect(receivablesHtml).toContain(
+      'data-listing-search-native="receivables"'
+    );
+    expect(receivablesHtml).toContain('data-report-export="receivables"');
   });
 });

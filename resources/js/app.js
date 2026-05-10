@@ -10,8 +10,10 @@ import { exportRouteReport } from "./report-export.js";
 import {
   renderCrudFormRoute,
   renderCrudRoute,
-  renderReportExportActions,
+  renderOwnerPerformanceTable,
+  renderReceivablesRoute,
 } from "./rental-page-views.js";
+import { createInitialListingState } from "./listing-state.js";
 import {
   clearSearchableSelection,
   closeSearchableSelects,
@@ -19,6 +21,7 @@ import {
   openSearchableSelect,
   renderSearchableOptions,
   restoreSearchableInput,
+  setSearchableFreeTextValue,
   selectSearchableOption,
 } from "./searchable-select.js";
 import { loadSettingsFeatureFlags } from "./settings-feature-flags.js";
@@ -46,6 +49,13 @@ const state = {
   settingsFeatures: {
     demoSeedEnabled: false,
   },
+  listingViews: {
+    owners: createInitialListingState("owners"),
+    tenants: createInitialListingState("tenants"),
+    properties: createInitialListingState("properties"),
+    contracts: createInitialListingState("contracts"),
+    receivables: createInitialListingState("receivables"),
+  },
   snapshot: {
     owners: [],
     tenants: [],
@@ -58,6 +68,7 @@ const state = {
 };
 
 let toastTimeoutId = 0;
+const listingSearchTimers = new Map();
 
 function currency(value = 0) {
   return new Intl.NumberFormat("pt-BR", {
@@ -274,42 +285,6 @@ function receivablesTable(receivables) {
   `;
 }
 
-function ownerPerformanceTable(rows) {
-  if (!rows.length) {
-    return emptyState("Sem consolidado por proprietario.");
-  }
-  return `
-    <div class="table-shell">
-      <table class="min-w-full text-left text-sm">
-        <thead class="text-stone-500">
-          <tr class="border-b border-stone-200">
-            <th class="px-3 py-3 font-medium">Proprietario</th>
-            <th class="px-3 py-3 font-medium">Imoveis</th>
-            <th class="px-3 py-3 font-medium">Previsto</th>
-            <th class="px-3 py-3 font-medium">Recebido</th>
-            <th class="px-3 py-3 font-medium">Em atraso</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map(
-              (row) => `
-                <tr class="border-b border-stone-100">
-                  <td class="px-3 py-4 font-medium">${row.name}</td>
-                  <td class="px-3 py-4">${row.properties_count}</td>
-                  <td class="px-3 py-4">${currency(row.expected_total)}</td>
-                  <td class="px-3 py-4">${currency(row.received_total)}</td>
-                  <td class="px-3 py-4">${currency(row.overdue_total)}</td>
-                </tr>
-              `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
 function dashboardPage() {
   return `
     <div class="page-stack">
@@ -328,21 +303,7 @@ function dashboardPage() {
           `
         )}
       </div>
-      ${pageSection("Performance por proprietario", "Analise", ownerPerformanceTable(state.snapshot.ownerPerformance))}
-    </div>
-  `;
-}
-
-function receivablesPage() {
-  return `
-    <div class="page-stack">
-      ${pageSection(
-        "Contas a receber",
-        "Financeiro",
-        receivablesTable(state.snapshot.receivables),
-        renderReportExportActions("receivables")
-      )}
-      ${pageSection("Relatorio por proprietario", "Consolidado", ownerPerformanceTable(state.snapshot.ownerPerformance))}
+      ${pageSection("Performance por proprietario", "Analise", renderOwnerPerformanceTable(state.snapshot.ownerPerformance))}
     </div>
   `;
 }
@@ -354,9 +315,14 @@ function settingsPage() {
 function currentRouteView() {
   if (["owners", "tenants", "properties", "contracts"].includes(state.route)) {
     if (state.routeContext.action === "list") {
-      return renderCrudRoute(state.route, state.snapshot, {
-        [state.route]: currentInlineCrudRecord(state.route),
-      });
+      return renderCrudRoute(
+        state.route,
+        state.snapshot,
+        {
+          [state.route]: currentInlineCrudRecord(state.route),
+        },
+        state.listingViews
+      );
     }
     return renderCrudFormRoute(
       state.route,
@@ -365,7 +331,10 @@ function currentRouteView() {
     );
   }
   if (state.route === "receivables") {
-    return receivablesPage();
+    return renderReceivablesRoute(
+      state.snapshot,
+      state.listingViews.receivables
+    );
   }
   if (state.route === "settings") {
     return settingsPage();
@@ -411,6 +380,23 @@ function navigateToHash(hash) {
 }
 
 window.__appNavigate = navigateToHash;
+
+function updateListingState(route, nextState) {
+  state.listingViews[route] = {
+    ...state.listingViews[route],
+    ...nextState,
+  };
+  renderApp();
+}
+
+function scheduleListingSearchUpdate(route, search) {
+  window.clearTimeout(listingSearchTimers.get(route) ?? 0);
+  const timeoutId = window.setTimeout(() => {
+    updateListingState(route, { search, page: 1 });
+    listingSearchTimers.delete(route);
+  }, 180);
+  listingSearchTimers.set(route, timeoutId);
+}
 
 function currentCrudRecord(route, routeContext) {
   if (routeContext.action === "new") {
@@ -881,6 +867,14 @@ function attachClickEvents() {
       return;
     }
 
+    const pageButton = event.target.closest("[data-listing-page]");
+    if (pageButton) {
+      updateListingState(pageButton.dataset.listingPage, {
+        page: Number(pageButton.dataset.page),
+      });
+      return;
+    }
+
     if (event.target.id === "settings-reset") {
       openDeleteModal("settings-reset", "all");
       return;
@@ -899,6 +893,34 @@ function attachClickEvents() {
 
 function attachChangeEvents() {
   document.body.addEventListener("change", async (event) => {
+    if (event.target.matches("[data-listing-search-native]")) {
+      const searchableSelect = event.target.closest("[data-searchable-select]");
+      const selectedOption = event.target.selectedOptions[0];
+      const searchValue = selectedOption?.textContent?.trim() ?? "";
+      setSearchableFreeTextValue(searchableSelect, searchValue);
+      updateListingState(event.target.dataset.listingSearchNative, {
+        search: searchValue,
+        page: 1,
+      });
+      return;
+    }
+
+    if (event.target.matches("[data-listing-filter]")) {
+      updateListingState(event.target.dataset.listingFilter, {
+        filter: event.target.value,
+        page: 1,
+      });
+      return;
+    }
+
+    if (event.target.matches("[data-listing-sort]")) {
+      updateListingState(event.target.dataset.listingSort, {
+        sort: event.target.value,
+        page: 1,
+      });
+      return;
+    }
+
     if (event.target.id !== "contract-property-select") {
       return;
     }
@@ -917,6 +939,19 @@ function attachChangeEvents() {
 
 function attachInputEvents() {
   document.body.addEventListener("input", (event) => {
+    if (event.target.matches("[data-listing-search]")) {
+      const searchableSelect = event.target.closest("[data-searchable-select]");
+      setSearchableFreeTextValue(searchableSelect, event.target.value);
+      clearSearchableSelection(searchableSelect);
+      renderSearchableOptions(searchableSelect, event.target.value);
+      searchableSelect.dataset.open = "true";
+      scheduleListingSearchUpdate(
+        event.target.dataset.listingSearch,
+        event.target.value
+      );
+      return;
+    }
+
     if (event.target.matches("[data-searchable-input]")) {
       const searchableSelect = event.target.closest("[data-searchable-select]");
       clearSearchableSelection(searchableSelect);

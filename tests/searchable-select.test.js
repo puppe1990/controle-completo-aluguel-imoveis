@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   filterSearchableOptions,
   normalizeSearchableText,
+  restoreSearchableInput,
   selectedSearchableLabel,
+  setSearchableFreeTextValue,
 } from "../resources/js/searchable-select.js";
 
 describe("searchable-select", () => {
@@ -33,5 +35,23 @@ describe("searchable-select", () => {
 
     expect(selectedSearchableLabel(options, 12)).toBe("Carlos Menezes");
     expect(selectedSearchableLabel(options, "404")).toBe("");
+  });
+
+  it("restores free-text searchable inputs without clearing the query", () => {
+    const input = { value: "", dataset: { searchPlaceholder: "Buscar..." } };
+    const container = {
+      dataset: { searchableFreeText: "true", freeTextValue: "Ana" },
+      querySelector(selector) {
+        if (selector === "[data-searchable-input]") {
+          return input;
+        }
+        return { options: [] };
+      },
+    };
+
+    setSearchableFreeTextValue(container, "Bruno");
+    restoreSearchableInput(container);
+
+    expect(input.value).toBe("Bruno");
   });
 });
