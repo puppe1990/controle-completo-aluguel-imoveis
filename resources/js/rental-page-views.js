@@ -46,6 +46,24 @@ function pageSection(title, description, content, actions = "") {
   `;
 }
 
+function listSectionActions(primaryAction, exportActions) {
+  return `
+    <div class="section-actions">
+      <div class="section-actions__primary">${primaryAction}</div>
+      <div class="section-actions__secondary">${exportActions}</div>
+    </div>
+  `;
+}
+
+function listPageSection(title, description, content, primaryAction, route) {
+  return pageSection(
+    title,
+    description,
+    content,
+    listSectionActions(primaryAction, renderReportExportActions(route))
+  );
+}
+
 function backButton(route) {
   return `
     <a class="btn-secondary" href="#/${route}" onclick="window.__appNavigate('#/${route}'); return false;">
@@ -214,12 +232,12 @@ function ownersPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${pageSection(
+      ${listPageSection(
         "Lista de proprietarios",
         `${snapshot.owners.length} registro(s) na base`,
         `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], ownerRows(snapshot.owners))}</div>`,
-        createButton("owners", "Novo proprietario") +
-          renderReportExportActions("owners")
+        createButton("owners", "Novo proprietario"),
+        "owners"
       )}
       ${formSection}
     </div>
@@ -486,12 +504,12 @@ function contractsPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${pageSection(
+      ${listPageSection(
         "Contratos",
         `${snapshot.contracts.length} registro(s) na operacao`,
         `<div class="table-shell">${crudTable(["Imovel", "Inquilino", "Periodo", "Vencimento", "Valor", "Status", ""], contractRows(snapshot.contracts))}</div>`,
-        createButton("contracts", "Novo contrato") +
-          renderReportExportActions("contracts")
+        createButton("contracts", "Novo contrato"),
+        "contracts"
       )}
       ${formSection}
     </div>
@@ -509,12 +527,12 @@ function propertiesPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${pageSection(
+      ${listPageSection(
         "Portfolio de imoveis",
         `${snapshot.properties.length} unidade(s) administrada(s)`,
         `<div class="table-shell">${crudTable(["Codigo", "Nome", "Proprietario", "Cidade/UF", "Aluguel", "Status", ""], propertyRows(snapshot.properties))}</div>`,
-        createButton("properties", "Novo imovel") +
-          renderReportExportActions("properties")
+        createButton("properties", "Novo imovel"),
+        "properties"
       )}
       ${formSection}
     </div>
@@ -532,12 +550,12 @@ function tenantsPage(snapshot, editor) {
 
   return `
     <div class="page-stack">
-      ${pageSection(
+      ${listPageSection(
         "Lista de inquilinos",
         `${snapshot.tenants.length} registro(s) na base`,
         `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], tenantRows(snapshot.tenants))}</div>`,
-        createButton("tenants", "Novo inquilino") +
-          renderReportExportActions("tenants")
+        createButton("tenants", "Novo inquilino"),
+        "tenants"
       )}
       ${formSection}
     </div>

@@ -288,6 +288,7 @@ button[data-loading="true"]::before {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .section-eyebrow {
@@ -459,10 +460,59 @@ button[data-loading="true"]::before {
   border-radius: 1.25rem;
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.9rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.section-actions__primary {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.section-actions__secondary {
+  display: flex;
+}
+
+.section-actions__secondary .row-actions {
+  justify-content: flex-start;
+}
+
 .row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+  .section-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .section-actions {
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .section-actions__primary,
+  .section-actions__secondary,
+  .section-actions__secondary .row-actions {
+    width: 100%;
+  }
+
+  .section-actions__primary .btn-primary,
+  .section-actions__secondary .btn-secondary {
+    flex: 1 1 0;
+    justify-content: center;
+  }
 }
 
 .modal-backdrop {
