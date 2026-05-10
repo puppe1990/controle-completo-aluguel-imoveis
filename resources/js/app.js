@@ -13,6 +13,15 @@ import {
 } from "./rental-form-formatters.js";
 import { readBackupFile, saveBackupFile } from "./backup-transfer.js";
 import { renderCrudFormRoute, renderCrudRoute } from "./rental-page-views.js";
+import {
+  clearSearchableSelection,
+  closeSearchableSelects,
+  enhanceSearchableSelects,
+  openSearchableSelect,
+  renderSearchableOptions,
+  restoreSearchableInput,
+  selectSearchableOption,
+} from "./searchable-select.js";
 import { renderSettingsPage } from "./settings-page.js";
 
 const EXTENSION_ID = "js.imobiliaria.sqlite";
@@ -325,7 +334,9 @@ function currentRouteView() {
 function renderCurrentRoute() {
   document.getElementById("app-view").innerHTML =
     currentRouteView() + renderDeleteModal();
-  applyInputMasks(document.getElementById("app-view"), {
+  const appView = document.getElementById("app-view");
+  enhanceSearchableSelects(appView);
+  applyInputMasks(appView, {
     storedValue: true,
   });
 }
@@ -397,9 +408,35 @@ function formCommand(form) {
   return id ? `${entity}.update` : `${entity}.create`;
 }
 
+function searchableFieldLabel(select) {
+  return (
+    select.closest(".field-block")?.querySelector(".field-label")
+      ?.textContent ?? select.name
+  );
+}
+
+function validateSearchableSelects(form) {
+  form
+    .querySelectorAll("[data-searchable-native][required]")
+    .forEach((select) => {
+      if (select.value) {
+        return;
+      }
+      const searchableInput = select
+        .closest("[data-searchable-select]")
+        ?.querySelector("[data-searchable-input]");
+      const fieldValue = searchableInput?.value;
+      searchableInput?.focus();
+      throw new Error(
+        `Campo "${searchableFieldLabel(select)}" invalido: value="${fieldValue ?? ""}" e esperado um item selecionado.`
+      );
+    });
+}
+
 async function handleFormSubmit(form) {
   const entity = formEntity(form.id);
   const command = formCommand(form);
+  validateSearchableSelects(form);
   const payload = normalizeFormPayload(form.id, formToObject(form));
   const snapshot = await state.api.request(command, payload);
   refreshSnapshot(snapshot);
@@ -528,6 +565,19 @@ function attachSubmitEvents() {
 }
 
 function attachClickEvents() {
+  document.body.addEventListener("mousedown", (event) => {
+    const searchableOption = event.target.closest("[data-searchable-option]");
+    if (!searchableOption) {
+      return;
+    }
+    event.preventDefault();
+    const searchableSelect = event.target.closest("[data-searchable-select]");
+    selectSearchableOption(
+      searchableSelect,
+      searchableOption.dataset.searchableOption
+    );
+  });
+
   document.body.addEventListener("click", async (event) => {
     const createButton = event.target.closest(".crud-create-button");
     if (createButton) {
@@ -598,6 +648,16 @@ function attachClickEvents() {
 
     if (event.target.id === "settings-reset") {
       openDeleteModal("settings-reset", "all");
+      return;
+    }
+
+    const searchableOption = event.target.closest("[data-searchable-option]");
+    if (searchableOption) {
+      return;
+    }
+
+    if (!event.target.closest("[data-searchable-select]")) {
+      closeSearchableSelects();
     }
   });
 }
@@ -622,6 +682,14 @@ function attachChangeEvents() {
 
 function attachInputEvents() {
   document.body.addEventListener("input", (event) => {
+    if (event.target.matches("[data-searchable-input]")) {
+      const searchableSelect = event.target.closest("[data-searchable-select]");
+      clearSearchableSelection(searchableSelect);
+      renderSearchableOptions(searchableSelect, event.target.value);
+      searchableSelect.dataset.open = "true";
+      return;
+    }
+
     if (event.target.matches("[data-mask]")) {
       applyInputMask(event.target);
     }
@@ -630,6 +698,20 @@ function attachInputEvents() {
   document.body.addEventListener(
     "blur",
     (event) => {
+      if (event.target.matches("[data-searchable-input]")) {
+        const searchableSelect = event.target.closest(
+          "[data-searchable-select]"
+        );
+        window.setTimeout(() => {
+          if (searchableSelect?.contains(document.activeElement)) {
+            return;
+          }
+          searchableSelect.dataset.open = "false";
+          restoreSearchableInput(searchableSelect);
+        }, 0);
+        return;
+      }
+
       if (event.target.matches("[data-mask]")) {
         applyInputMask(event.target);
       }
@@ -647,6 +729,14 @@ function attachGlobalEvents() {
 
   document.body.addEventListener("keydown", async (event) => {
     await handleClipboardShortcut(event, Neutralino.clipboard);
+  });
+
+  document.body.addEventListener("focusin", (event) => {
+    if (!event.target.matches("[data-searchable-input]")) {
+      return;
+    }
+    closeSearchableSelects();
+    openSearchableSelect(event.target.closest("[data-searchable-select]"));
   });
 }
 
