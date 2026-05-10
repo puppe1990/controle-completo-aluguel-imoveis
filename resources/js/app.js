@@ -1,4 +1,5 @@
 import { ROUTES, getRouteFromHashValue } from "./app-routes.js";
+import { handleClipboardShortcut } from "./clipboard-shortcuts.js";
 import { renderSettingsPage } from "./settings-page.js";
 
 const EXTENSION_ID = "js.imobiliaria.sqlite";
@@ -667,6 +668,10 @@ function attachEvents() {
   window.addEventListener("hashchange", () => {
     state.route = getRouteFromHash();
     renderApp();
+  });
+
+  document.body.addEventListener("keydown", async (event) => {
+    await handleClipboardShortcut(event, Neutralino.clipboard);
   });
 }
 
