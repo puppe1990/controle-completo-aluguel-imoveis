@@ -11,6 +11,7 @@ import {
   applyInputMasks,
   normalizeFormPayload,
 } from "./rental-form-formatters.js";
+import { readBackupFile, saveBackupFile } from "./backup-transfer.js";
 import { renderCrudFormRoute, renderCrudRoute } from "./rental-page-views.js";
 import { renderSettingsPage } from "./settings-page.js";
 
@@ -485,22 +486,23 @@ async function confirmCrudDelete() {
 async function exportBackup() {
   setStatus("Gerando backup...");
   const backup = await state.api.request("settings.export");
-  const blob = new Blob([JSON.stringify(backup, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "imobiliaria-backup.json";
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const hasExported = await saveBackupFile(backup, Neutralino);
+  if (!hasExported) {
+    setStatus("Exportacao cancelada");
+    return;
+  }
   setStatus("Backup exportado");
 }
 
-async function importBackupFile(file) {
+async function importBackup() {
   setStatus("Importando backup...");
+  const backup = await readBackupFile(Neutralino);
+  if (!backup) {
+    setStatus("Importacao cancelada");
+    return;
+  }
   const snapshot = await state.api.request("settings.import", {
-    backup: JSON.parse(await file.text()),
+    backup,
   });
   refreshSnapshot(snapshot);
   setStatus("Backup importado");
@@ -589,6 +591,11 @@ function attachClickEvents() {
       return;
     }
 
+    if (event.target.id === "settings-import") {
+      await runUiTask(importBackup);
+      return;
+    }
+
     if (event.target.id === "settings-reset") {
       openDeleteModal("settings-reset", "all");
     }
@@ -597,16 +604,6 @@ function attachClickEvents() {
 
 function attachChangeEvents() {
   document.body.addEventListener("change", async (event) => {
-    if (event.target.id === "settings-import-file") {
-      const file = event.target.files?.[0];
-      if (!file) {
-        return;
-      }
-      await runUiTask(() => importBackupFile(file));
-      event.target.value = "";
-      return;
-    }
-
     if (event.target.id !== "contract-property-select") {
       return;
     }

@@ -37,7 +37,7 @@ describe("settings route", () => {
     expect(html).toContain("Deletar toda a base");
     expect(html).toContain('id="seed-demo"');
     expect(html).toContain('id="settings-export"');
-    expect(html).toContain('id="settings-import-file"');
+    expect(html).toContain('id="settings-import"');
     expect(html).toContain('id="settings-reset"');
   });
 });

@@ -17,6 +17,7 @@
   "nativeAllowList": [
     "app.*",
     "clipboard.*",
+    "filesystem.*",
     "os.*",
     "window.*",
     "extensions.*"
