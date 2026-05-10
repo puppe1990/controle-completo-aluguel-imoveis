@@ -1,6 +1,5 @@
-export function renderSettingsPage() {
+function renderDemoSeedSection() {
   return `
-    <div class="page-stack">
       <section class="panel page-section">
         <div class="section-heading">
           <div>
@@ -15,6 +14,14 @@ export function renderSettingsPage() {
           </article>
         </div>
       </section>
+  `;
+}
+
+export function renderSettingsPage(options = {}) {
+  const { demoSeedEnabled = false } = options;
+  return `
+    <div class="page-stack">
+      ${demoSeedEnabled ? renderDemoSeedSection() : ""}
       <section class="panel page-section">
         <div class="section-heading">
           <div>

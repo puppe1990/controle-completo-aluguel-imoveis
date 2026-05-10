@@ -27,8 +27,8 @@ describe("settings route", () => {
     });
   });
 
-  it("renders seed, export and import actions", () => {
-    const html = renderSettingsPage();
+  it("renders seed, export and import actions when demo seed is enabled", () => {
+    const html = renderSettingsPage({ demoSeedEnabled: true });
 
     expect(html).toContain("Popular com dados de exemplo");
     expect(html).toContain("Exportar dados");
@@ -39,5 +39,15 @@ describe("settings route", () => {
     expect(html).toContain('id="settings-export"');
     expect(html).toContain('id="settings-import"');
     expect(html).toContain('id="settings-reset"');
+  });
+
+  it("hides demo seed action when demo seed is disabled", () => {
+    const html = renderSettingsPage();
+
+    expect(html).not.toContain("Popular com dados de exemplo");
+    expect(html).not.toContain('id="seed-demo"');
+    expect(html).toContain("Exportar dados");
+    expect(html).toContain("Importar dados");
+    expect(html).toContain("Deletar toda a base");
   });
 });

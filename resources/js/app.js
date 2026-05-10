@@ -16,6 +16,7 @@ import {
   restoreSearchableInput,
   selectSearchableOption,
 } from "./searchable-select.js";
+import { loadSettingsFeatureFlags } from "./settings-feature-flags.js";
 import { renderSettingsPage } from "./settings-page.js";
 import { translateReceivableStatus } from "./receivable-status-label.js";
 import { submitFeedback } from "./submit-feedback.js";
@@ -37,6 +38,9 @@ const state = {
   api: null,
   deleteModal: null,
   receivablePaymentCancelModal: null,
+  settingsFeatures: {
+    demoSeedEnabled: false,
+  },
   snapshot: {
     owners: [],
     tenants: [],
@@ -333,7 +337,7 @@ function receivablesPage() {
 }
 
 function settingsPage() {
-  return renderSettingsPage();
+  return renderSettingsPage(state.settingsFeatures);
 }
 
 function currentRouteView() {
@@ -709,6 +713,10 @@ async function runUiTask(task) {
   }
 }
 
+function seedDemoGuardMessage() {
+  return "Popular com dados de exemplo indisponivel. Defina IMOBILIARIA_ENABLE_DEMO_SEED=true no ambiente local.";
+}
+
 async function withButtonLoading(button, label, task) {
   if (!button) {
     return task();
@@ -817,6 +825,9 @@ function attachClickEvents() {
 
     if (event.target.id === "seed-demo") {
       await runUiTask(async () => {
+        if (!state.settingsFeatures.demoSeedEnabled) {
+          throw new Error(seedDemoGuardMessage());
+        }
         refreshSnapshot(await state.api.request("seedDemo"));
       });
       return;
@@ -937,6 +948,7 @@ async function main() {
   try {
     initNeutralino();
     state.api = createBackendClient();
+    state.settingsFeatures = await loadSettingsFeatureFlags(Neutralino);
     attachEvents();
     state.routeContext = getRouteFromHash();
     state.route = state.routeContext.route;

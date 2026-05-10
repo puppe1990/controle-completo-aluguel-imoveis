@@ -34,6 +34,15 @@ No desenvolvimento:
 - Relatorio por proprietario
 - Seed de dados de exemplo
 
+## Seed local de exemplo
+
+A opcao de popular a base com dados de exemplo fica escondida por padrao.
+Para habilitar no ambiente local, rode o app com a variavel `IMOBILIARIA_ENABLE_DEMO_SEED=true`.
+
+```bash
+IMOBILIARIA_ENABLE_DEMO_SEED=true npm run dev
+```
+
 ## Build
 
 ```bash
