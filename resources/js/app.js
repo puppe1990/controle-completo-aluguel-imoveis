@@ -6,11 +6,11 @@ import {
   normalizeFormPayload,
 } from "./rental-form-formatters.js";
 import { readBackupFile, saveBackupFile } from "./backup-transfer.js";
+import { renderDashboardPage } from "./dashboard-page.js";
 import { exportRouteReport } from "./report-export.js";
 import {
   renderCrudFormRoute,
   renderCrudRoute,
-  renderOwnerPerformanceTable,
   renderReceivablesRoute,
 } from "./rental-page-views.js";
 import { createInitialListingState, nextListingSort } from "./listing-state.js";
@@ -26,7 +26,6 @@ import {
 } from "./searchable-select.js";
 import { loadSettingsFeatureFlags } from "./settings-feature-flags.js";
 import { renderSettingsPage } from "./settings-page.js";
-import { translateReceivableStatus } from "./receivable-status-label.js";
 import { submitFeedback } from "./submit-feedback.js";
 
 const EXTENSION_ID = "js.imobiliaria.sqlite";
@@ -214,98 +213,13 @@ function renderShellHeader() {
   `;
 }
 
-function summaryCards(summary = {}) {
-  const cards = [
-    { label: "Proprietarios", value: summary.owners ?? 0 },
-    { label: "Inquilinos", value: summary.tenants ?? 0 },
-    { label: "Imoveis", value: summary.properties ?? 0 },
-    { label: "Contratos ativos", value: summary.active_contracts ?? 0 },
-    { label: "Recebido", value: currency(summary.received_total ?? 0) },
-    { label: "Em atraso", value: currency(summary.overdue_total ?? 0) },
-  ];
-  return `
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-      ${cards
-        .map(
-          (item) => `
-            <article class="stat-card">
-              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">${item.label}</p>
-              <p class="mt-4 text-3xl font-semibold text-stone-950">${item.value}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function receivablesTable(receivables) {
-  if (!receivables.length) {
-    return emptyState("Nenhuma conta a receber cadastrada.");
-  }
-  return `
-    <div class="table-shell">
-      <table class="min-w-full text-left text-sm">
-        <thead class="text-stone-500">
-          <tr class="border-b border-stone-200">
-            <th class="px-3 py-3 font-medium">Referencia</th>
-            <th class="px-3 py-3 font-medium">Imovel</th>
-            <th class="px-3 py-3 font-medium">Inquilino</th>
-            <th class="px-3 py-3 font-medium">Vencimento</th>
-            <th class="px-3 py-3 font-medium">Valor</th>
-            <th class="px-3 py-3 font-medium">Status</th>
-            <th class="px-3 py-3 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${receivables
-            .map(
-              (row) => `
-                <tr class="border-b border-stone-100">
-                  <td class="px-3 py-4">${row.reference_month}</td>
-                  <td class="px-3 py-4">${row.property_code} · ${row.property_title}</td>
-                  <td class="px-3 py-4">${row.tenant_name}</td>
-                  <td class="px-3 py-4">${row.due_date}</td>
-                  <td class="px-3 py-4 font-medium">${currency(row.amount)}</td>
-                  <td class="px-3 py-4">${statusPill(row.status_label, translateReceivableStatus(row.status_label))}</td>
-                  <td class="px-3 py-4">
-                    ${
-                      row.status_label === "paid"
-                        ? `<button class="btn-secondary receivable-unpay-button !px-3 !py-2 text-xs" data-id="${row.id}" type="button">Cancelar</button>`
-                        : `<button class="btn-secondary pay-button !px-3 !py-2 text-xs" data-id="${row.id}">Registrar pagamento</button>`
-                    }
-                  </td>
-                </tr>
-              `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
 function dashboardPage() {
-  return `
-    <div class="page-stack">
-      ${summaryCards(state.snapshot.summary)}
-      <div class="page-grid page-grid--split">
-        ${pageSection("Recebimentos e inadimplencia", "Financeiro", receivablesTable(state.snapshot.receivables.slice(0, 6)))}
-        ${pageSection(
-          "Operacao atual",
-          "Resumo rapido",
-          `
-            <div class="card-list">
-              <article class="record-card"><div class="record-card__top"><strong>Proprietarios</strong><span>${state.snapshot.owners.length}</span></div><p>Base de proprietarios administrados no sistema.</p></article>
-              <article class="record-card"><div class="record-card__top"><strong>Inquilinos</strong><span>${state.snapshot.tenants.length}</span></div><p>Clientes com contratos ativos ou historico cadastrado.</p></article>
-              <article class="record-card"><div class="record-card__top"><strong>Imoveis</strong><span>${state.snapshot.properties.length}</span></div><p>Unidades disponiveis e alugadas sob gestao.</p></article>
-            </div>
-          `
-        )}
-      </div>
-      ${pageSection("Performance por proprietario", "Analise", renderOwnerPerformanceTable(state.snapshot.ownerPerformance))}
-    </div>
-  `;
+  return renderDashboardPage(state.snapshot, {
+    currency,
+    emptyState,
+    pageSection,
+    statusPill,
+  });
 }
 
 function settingsPage() {
