@@ -48,7 +48,7 @@ function pageSection(title, description, content, actions = "") {
 
 function backButton(route) {
   return `
-    <a class="btn-secondary" href="#/${route}">
+    <a class="btn-secondary" href="#/${route}" onclick="window.__appNavigate('#/${route}'); return false;">
       Voltar para a listagem
     </a>
   `;
@@ -100,9 +100,9 @@ function searchableSelectField(
 function actionButtons(entity, id) {
   return `
     <div class="row-actions">
-      <button class="btn-warning crud-edit-button !px-3 !py-2 text-xs" data-entity="${entity}" data-id="${id}" type="button">
+      <a class="btn-warning !px-3 !py-2 text-xs" href="#/${entity}/${id}/edit" onclick="window.__appOpenCrudEdit('${entity}', '${id}'); return false;">
         Editar
-      </button>
+      </a>
       <button class="btn-danger crud-delete-button !px-3 !py-2 text-xs" data-entity="${entity}" data-id="${id}" type="button">
         Excluir
       </button>
@@ -115,24 +115,24 @@ function editorActions(entity, isEditing) {
     return "";
   }
   return `
-    <button class="btn-secondary crud-cancel-button" data-entity="${entity}" type="button">
+    <a class="btn-secondary" href="#/${entity}" onclick="window.__appCloseCrudEditor('${entity}'); return false;">
       Cancelar edicao
-    </button>
+    </a>
   `;
 }
 
 function createButton(entity, label) {
   return `
-    <button class="btn-primary crud-create-button" data-entity="${entity}" type="button">
+    <a class="btn-primary" href="#/${entity}/new" onclick="window.__appOpenCrudCreate('${entity}'); return false;">
       ${label}
-    </button>
+    </a>
   `;
 }
 
 function ownerForm(editor) {
-  const isEditing = Boolean(editor);
+  const isEditing = Boolean(editor?.id);
   return `
-    <form id="owner-form" class="form-stack">
+    <form id="owner-form" class="form-stack" onsubmit="window.__appSubmitForm(event, 'owner-form'); return false;">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
       <label class="field-block">
         <span class="field-label">Nome completo</span>
@@ -185,14 +185,12 @@ function ownerRows(owners) {
 
 function ownersPage(snapshot, editor) {
   const isEditing = Boolean(editor?.id);
-  const formSection = editor
-    ? pageSection(
-        isEditing ? "Editar proprietario" : "Novo proprietario",
-        "Cadastro com contato e documento",
-        ownerForm(editor),
-        editorActions("owners", isEditing)
-      )
-    : "";
+  const formSection = pageSection(
+    isEditing ? "Editar proprietario" : "Novo proprietario",
+    "Cadastro com contato e documento",
+    ownerForm(editor ?? { id: "" }),
+    editorActions("owners", isEditing)
+  );
 
   return `
     <div class="page-stack">
@@ -208,9 +206,9 @@ function ownersPage(snapshot, editor) {
 }
 
 function tenantForm(editor) {
-  const isEditing = Boolean(editor);
+  const isEditing = Boolean(editor?.id);
   return `
-    <form id="tenant-form" class="form-stack">
+    <form id="tenant-form" class="form-stack" onsubmit="window.__appSubmitForm(event, 'tenant-form'); return false;">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
       <label class="field-block">
         <span class="field-label">Nome completo</span>
@@ -278,9 +276,9 @@ function propertyOwnerOptions(owners, selectedId) {
 }
 
 function propertyForm(snapshot, editor) {
-  const isEditing = Boolean(editor);
+  const isEditing = Boolean(editor?.id);
   return `
-    <form id="property-form" class="form-stack">
+    <form id="property-form" class="form-stack" onsubmit="window.__appSubmitForm(event, 'property-form'); return false;">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
       ${searchableSelectField(
         "Proprietario",
@@ -377,9 +375,9 @@ function contractPropertyOptions(properties, selectedId) {
 }
 
 function contractForm(snapshot, editor) {
-  const isEditing = Boolean(editor);
+  const isEditing = Boolean(editor?.id);
   return `
-    <form id="contract-form" class="form-stack">
+    <form id="contract-form" class="form-stack" onsubmit="window.__appSubmitForm(event, 'contract-form'); return false;">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
       ${searchableSelectField(
         "Imovel",
@@ -458,14 +456,12 @@ function contractRows(contracts) {
 
 function contractsPage(snapshot, editor) {
   const isEditing = Boolean(editor?.id);
-  const formSection = editor
-    ? pageSection(
-        isEditing ? "Editar contrato" : "Novo contrato",
-        "Locacao com recebiveis automaticos",
-        contractForm(snapshot, editor),
-        editorActions("contracts", isEditing)
-      )
-    : "";
+  const formSection = pageSection(
+    isEditing ? "Editar contrato" : "Novo contrato",
+    "Locacao com recebiveis automaticos",
+    contractForm(snapshot, editor ?? { id: "" }),
+    editorActions("contracts", isEditing)
+  );
 
   return `
     <div class="page-stack">
@@ -482,14 +478,12 @@ function contractsPage(snapshot, editor) {
 
 function propertiesPage(snapshot, editor) {
   const isEditing = Boolean(editor?.id);
-  const formSection = editor
-    ? pageSection(
-        isEditing ? "Editar imovel" : "Novo imovel",
-        "Patrimonio com proprietario e aluguel base",
-        propertyForm(snapshot, editor),
-        editorActions("properties", isEditing)
-      )
-    : "";
+  const formSection = pageSection(
+    isEditing ? "Editar imovel" : "Novo imovel",
+    "Patrimonio com proprietario e aluguel base",
+    propertyForm(snapshot, editor ?? { id: "" }),
+    editorActions("properties", isEditing)
+  );
 
   return `
     <div class="page-stack">
@@ -506,14 +500,12 @@ function propertiesPage(snapshot, editor) {
 
 function tenantsPage(snapshot, editor) {
   const isEditing = Boolean(editor?.id);
-  const formSection = editor
-    ? pageSection(
-        isEditing ? "Editar inquilino" : "Novo inquilino",
-        "Cadastro com status de relacionamento",
-        tenantForm(editor),
-        editorActions("tenants", isEditing)
-      )
-    : "";
+  const formSection = pageSection(
+    isEditing ? "Editar inquilino" : "Novo inquilino",
+    "Cadastro com status de relacionamento",
+    tenantForm(editor ?? { id: "" }),
+    editorActions("tenants", isEditing)
+  );
 
   return `
     <div class="page-stack">

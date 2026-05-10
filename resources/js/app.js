@@ -1,10 +1,4 @@
-import {
-  ROUTES,
-  crudCreateHash,
-  crudEditHash,
-  crudListHash,
-  getRouteContextFromHash,
-} from "./app-routes.js";
+import { ROUTES, crudListHash, getRouteContextFromHash } from "./app-routes.js";
 import { handleClipboardShortcut } from "./clipboard-shortcuts.js";
 import {
   applyInputMask,
@@ -23,6 +17,7 @@ import {
   selectSearchableOption,
 } from "./searchable-select.js";
 import { renderSettingsPage } from "./settings-page.js";
+import { submitFeedback } from "./submit-feedback.js";
 
 const EXTENSION_ID = "js.imobiliaria.sqlite";
 
@@ -30,6 +25,11 @@ const state = {
   route: "dashboard",
   routeContext: {
     route: "dashboard",
+    action: "list",
+    recordId: null,
+  },
+  crudEditor: {
+    entity: null,
     action: "list",
     recordId: null,
   },
@@ -45,6 +45,8 @@ const state = {
     ownerPerformance: [],
   },
 };
+
+let toastTimeoutId = 0;
 
 function currency(value = 0) {
   return new Intl.NumberFormat("pt-BR", {
@@ -79,6 +81,27 @@ function setStatus(message) {
   if (element) {
     element.textContent = message;
   }
+}
+
+function clearToast() {
+  const region = document.getElementById("toast-region");
+  if (region) {
+    region.innerHTML = "";
+  }
+}
+
+function showToast(message, tone = "success") {
+  const region = document.getElementById("toast-region");
+  if (!region) {
+    return;
+  }
+  window.clearTimeout(toastTimeoutId);
+  region.innerHTML = `
+    <div class="toast toast--${tone}" role="status" aria-live="polite">
+      ${message}
+    </div>
+  `;
+  toastTimeoutId = window.setTimeout(clearToast, 2600);
 }
 
 function routeMeta() {
@@ -314,7 +337,9 @@ function settingsPage() {
 function currentRouteView() {
   if (["owners", "tenants", "properties", "contracts"].includes(state.route)) {
     if (state.routeContext.action === "list") {
-      return renderCrudRoute(state.route, state.snapshot, {});
+      return renderCrudRoute(state.route, state.snapshot, {
+        [state.route]: currentInlineCrudRecord(state.route),
+      });
     }
     return renderCrudFormRoute(
       state.route,
@@ -353,15 +378,20 @@ function refreshSnapshot(snapshot) {
   renderApp();
 }
 
-function navigateToHash(hash) {
-  if (window.location.hash === hash) {
-    state.routeContext = getRouteFromHash();
-    state.route = state.routeContext.route;
-    renderApp();
-    return;
-  }
-  window.location.hash = hash;
+function applyRouteFromHash(hash) {
+  state.routeContext = getRouteContextFromHash(hash);
+  state.route = state.routeContext.route;
 }
+
+function navigateToHash(hash) {
+  applyRouteFromHash(hash);
+  renderApp();
+  if (window.location.hash !== hash) {
+    window.location.hash = hash;
+  }
+}
+
+window.__appNavigate = navigateToHash;
 
 function currentCrudRecord(route, routeContext) {
   if (routeContext.action === "new") {
@@ -377,16 +407,78 @@ function currentCrudRecord(route, routeContext) {
   );
 }
 
-function navigateToCrudCreate(entity) {
-  navigateToHash(crudCreateHash(entity));
+function currentInlineCrudRecord(route) {
+  if (state.crudEditor.entity !== route) {
+    return null;
+  }
+  if (state.crudEditor.action === "new") {
+    return { id: "" };
+  }
+  if (state.crudEditor.action !== "edit") {
+    return null;
+  }
+  return (
+    state.snapshot[route].find(
+      (row) => String(row.id) === String(state.crudEditor.recordId)
+    ) ?? null
+  );
 }
 
-function navigateToCrudEdit(entity, id) {
-  navigateToHash(crudEditHash(entity, id));
+function openCrudCreateInline(entity) {
+  state.crudEditor = {
+    entity,
+    action: "new",
+    recordId: null,
+  };
+  renderApp();
 }
 
-function navigateToCrudList(entity) {
-  navigateToHash(crudListHash(entity));
+function openCrudEditInline(entity, id) {
+  state.crudEditor = {
+    entity,
+    action: "edit",
+    recordId: id,
+  };
+  renderApp();
+}
+
+function closeCrudEditorInline(entity) {
+  if (state.crudEditor.entity !== entity) {
+    return;
+  }
+  state.crudEditor = {
+    entity: null,
+    action: "list",
+    recordId: null,
+  };
+  renderApp();
+}
+
+window.__appOpenCrudCreate = openCrudCreateInline;
+window.__appOpenCrudEdit = openCrudEditInline;
+window.__appCloseCrudEditor = closeCrudEditorInline;
+
+async function submitCrudForm(event, formId) {
+  event?.preventDefault();
+  const form = document.getElementById(formId);
+  if (!form) {
+    throw new Error(
+      `Formulario nao encontrado: id=${JSON.stringify(formId)}. Esperado: elemento form existente.`
+    );
+  }
+  await runUiTask(() => handleFormSubmit(form, formId));
+}
+
+window.__appSubmitForm = submitCrudForm;
+
+function redirectToCrudListWithSnapshot(entity, snapshot) {
+  const hash = crudListHash(entity);
+  applyRouteFromHash(hash);
+  state.snapshot = snapshot;
+  renderApp();
+  if (window.location.hash !== hash) {
+    window.location.hash = hash;
+  }
 }
 
 function formEntity(formId) {
@@ -399,8 +491,8 @@ function formEntity(formId) {
   return map[formId];
 }
 
-function formCommand(form) {
-  const entity = formEntity(form.id);
+function formCommand(formId, form) {
+  const entity = formEntity(formId);
   if (!entity) {
     return null;
   }
@@ -433,14 +525,33 @@ function validateSearchableSelects(form) {
     });
 }
 
-async function handleFormSubmit(form) {
-  const entity = formEntity(form.id);
-  const command = formCommand(form);
+async function handleFormSubmit(form, formId = form.id) {
+  const entity = formEntity(formId);
+  const command = formCommand(formId, form);
+  if (!entity || !command) {
+    throw new Error(
+      `Formulario CRUD invalido: formId=${JSON.stringify(formId)} command=${JSON.stringify(command)}. Esperado: formulario mapeado em formEntity().`
+    );
+  }
+  const feedback = submitFeedback(command);
   validateSearchableSelects(form);
-  const payload = normalizeFormPayload(form.id, formToObject(form));
-  const snapshot = await state.api.request(command, payload);
-  refreshSnapshot(snapshot);
-  navigateToCrudList(entity);
+  const payload = normalizeFormPayload(formId, formToObject(form));
+  const snapshot = await withButtonLoading(
+    form.querySelector('button[type="submit"]'),
+    feedback.pending,
+    () => state.api.request(command, payload)
+  );
+  state.crudEditor = {
+    entity: null,
+    action: "list",
+    recordId: null,
+  };
+  if (state.routeContext.action === "list") {
+    refreshSnapshot(snapshot);
+  } else {
+    redirectToCrudListWithSnapshot(entity, snapshot);
+  }
+  showToast(feedback.success);
 }
 
 function deleteCommand(entity) {
@@ -529,6 +640,7 @@ async function exportBackup() {
     return;
   }
   setStatus("Backup exportado");
+  showToast("Backup exportado com sucesso.");
 }
 
 async function importBackup() {
@@ -543,6 +655,7 @@ async function importBackup() {
   });
   refreshSnapshot(snapshot);
   setStatus("Backup importado");
+  showToast("Backup importado com sucesso.");
 }
 
 async function runUiTask(task) {
@@ -550,6 +663,25 @@ async function runUiTask(task) {
     await task();
   } catch (error) {
     setStatus(error.message);
+    showToast(error.message, "error");
+  }
+}
+
+async function withButtonLoading(button, label, task) {
+  if (!button) {
+    return task();
+  }
+  const originalLabel = button.dataset.originalLabel ?? button.textContent;
+  button.dataset.originalLabel = originalLabel;
+  button.dataset.loading = "true";
+  button.disabled = true;
+  button.textContent = label;
+  try {
+    return await task();
+  } finally {
+    button.disabled = false;
+    button.dataset.loading = "false";
+    button.textContent = originalLabel;
   }
 }
 
@@ -560,7 +692,7 @@ function attachSubmitEvents() {
       return;
     }
     event.preventDefault();
-    await runUiTask(() => handleFormSubmit(form));
+    await runUiTask(() => handleFormSubmit(form, form.id));
   });
 }
 
@@ -579,21 +711,10 @@ function attachClickEvents() {
   });
 
   document.body.addEventListener("click", async (event) => {
-    const createButton = event.target.closest(".crud-create-button");
-    if (createButton) {
-      navigateToCrudCreate(createButton.dataset.entity);
-      return;
-    }
-
-    const editButton = event.target.closest(".crud-edit-button");
-    if (editButton) {
-      navigateToCrudEdit(editButton.dataset.entity, editButton.dataset.id);
-      return;
-    }
-
-    const cancelButton = event.target.closest(".crud-cancel-button");
-    if (cancelButton) {
-      navigateToCrudList(cancelButton.dataset.entity);
+    const routeLink = event.target.closest('a[href^="#/"]');
+    if (routeLink) {
+      event.preventDefault();
+      navigateToHash(routeLink.getAttribute("href"));
       return;
     }
 
@@ -722,8 +843,7 @@ function attachInputEvents() {
 
 function attachGlobalEvents() {
   window.addEventListener("hashchange", () => {
-    state.routeContext = getRouteFromHash();
-    state.route = state.routeContext.route;
+    applyRouteFromHash(window.location.hash);
     renderApp();
   });
 
