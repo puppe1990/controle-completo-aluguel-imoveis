@@ -125,10 +125,6 @@ function renderShellHeader() {
       <p class="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">${meta.eyebrow}</p>
       <h2 class="mt-3 text-3xl font-semibold text-stone-950">${meta.label}</h2>
     </div>
-    <div class="header-actions">
-      <button id="seed-demo" class="btn-secondary">Popular com dados de exemplo</button>
-      <div id="status-banner" class="rounded-2xl bg-stone-950 px-4 py-3 text-sm text-white">Sistema carregando...</div>
-    </div>
   `;
 }
 

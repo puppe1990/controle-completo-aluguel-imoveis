@@ -13,11 +13,13 @@ describe("settings route", () => {
     expect(getRouteFromHashValue("#/missing")).toBe("dashboard");
   });
 
-  it("renders export and import actions", () => {
+  it("renders seed, export and import actions", () => {
     const html = renderSettingsPage();
 
+    expect(html).toContain("Popular com dados de exemplo");
     expect(html).toContain("Exportar dados");
     expect(html).toContain("Importar dados");
+    expect(html).toContain('id="seed-demo"');
     expect(html).toContain('id="settings-export"');
     expect(html).toContain('id="settings-import-file"');
   });

@@ -4,6 +4,20 @@ export function renderSettingsPage() {
       <section class="panel page-section">
         <div class="section-heading">
           <div>
+            <p class="section-eyebrow">Base inicial</p>
+            <h3 class="section-title">Popular com dados de exemplo</h3>
+          </div>
+        </div>
+        <div class="card-list">
+          <article class="record-card">
+            <p>Carregue proprietarios, inquilinos, imoveis, contratos e recebiveis de exemplo para explorar o sistema.</p>
+            <button id="seed-demo" class="btn-secondary mt-4" type="button">Popular com dados de exemplo</button>
+          </article>
+        </div>
+      </section>
+      <section class="panel page-section">
+        <div class="section-heading">
+          <div>
             <p class="section-eyebrow">Backup</p>
             <h3 class="section-title">Exportar dados</h3>
           </div>
