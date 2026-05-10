@@ -62,6 +62,41 @@ function selectedOption(value, expected) {
   return String(value ?? "") === String(expected) ? "selected" : "";
 }
 
+function searchableSelectField(
+  label,
+  name,
+  placeholder,
+  options,
+  attributes = ""
+) {
+  return `
+    <label class="field-block">
+      <span class="field-label">${label}</span>
+      <div class="search-select" data-searchable-select>
+        <input
+          class="field search-select__input"
+          data-searchable-input
+          data-search-placeholder="${escapeHtml(placeholder)}"
+          type="text"
+          autocomplete="off"
+          placeholder="${escapeHtml(placeholder)}"
+        />
+        <div class="search-select__menu" data-searchable-menu></div>
+        <select
+          class="search-select__native"
+          data-searchable-native
+          tabindex="-1"
+          aria-hidden="true"
+          name="${name}"
+          ${attributes}
+        >
+          ${options}
+        </select>
+      </div>
+    </label>
+  `;
+}
+
 function actionButtons(entity, id) {
   return `
     <div class="row-actions">
@@ -195,13 +230,15 @@ function tenantForm(editor) {
         <span class="field-label">E-mail</span>
         <input class="field" name="email" type="email" placeholder="cliente@email.com" value="${fieldValue(editor?.email)}" />
       </label>
-      <label class="field-block">
-        <span class="field-label">Status</span>
-        <select class="field" name="status">
+      ${searchableSelectField(
+        "Status",
+        "status",
+        "Buscar status...",
+        `
           <option value="active" ${selectedOption(editor?.status ?? "active", "active")}>Ativo</option>
           <option value="inactive" ${selectedOption(editor?.status, "inactive")}>Inativo</option>
-        </select>
-      </label>
+        `
+      )}
       <button class="btn-primary w-full" type="submit">
         ${isEditing ? "Salvar alteracoes" : "Salvar inquilino"}
       </button>
@@ -245,22 +282,27 @@ function propertyForm(snapshot, editor) {
   return `
     <form id="property-form" class="form-stack">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
-      <label class="field-block">
-        <span class="field-label">Proprietario</span>
-        <select class="field" name="owner_id" required>${propertyOwnerOptions(snapshot.owners, editor?.owner_id)}</select>
-      </label>
+      ${searchableSelectField(
+        "Proprietario",
+        "owner_id",
+        "Buscar proprietario...",
+        propertyOwnerOptions(snapshot.owners, editor?.owner_id),
+        "required"
+      )}
       <div class="grid gap-3 md:grid-cols-2">
         <label class="field-block">
           <span class="field-label">Codigo interno</span>
           <input class="field" data-mask="code" name="code" placeholder="APT-101" required value="${fieldValue(editor?.code)}" />
         </label>
-        <label class="field-block">
-          <span class="field-label">Status do imovel</span>
-          <select class="field" name="status">
+        ${searchableSelectField(
+          "Status do imovel",
+          "status",
+          "Buscar status...",
+          `
             <option value="available" ${selectedOption(editor?.status ?? "available", "available")}>Disponivel</option>
             <option value="rented" ${selectedOption(editor?.status, "rented")}>Alugado</option>
-          </select>
-        </label>
+          `
+        )}
       </div>
       <label class="field-block">
         <span class="field-label">Nome comercial</span>
@@ -339,14 +381,20 @@ function contractForm(snapshot, editor) {
   return `
     <form id="contract-form" class="form-stack">
       <input name="id" type="hidden" value="${fieldValue(editor?.id)}" />
-      <label class="field-block">
-        <span class="field-label">Imovel</span>
-        <select class="field" name="property_id" id="contract-property-select" required>${contractPropertyOptions(snapshot.properties, editor?.property_id)}</select>
-      </label>
-      <label class="field-block">
-        <span class="field-label">Inquilino</span>
-        <select class="field" name="tenant_id" required>${contractTenantOptions(snapshot.tenants, editor?.tenant_id)}</select>
-      </label>
+      ${searchableSelectField(
+        "Imovel",
+        "property_id",
+        "Buscar imovel...",
+        contractPropertyOptions(snapshot.properties, editor?.property_id),
+        'id="contract-property-select" required'
+      )}
+      ${searchableSelectField(
+        "Inquilino",
+        "tenant_id",
+        "Buscar inquilino...",
+        contractTenantOptions(snapshot.tenants, editor?.tenant_id),
+        "required"
+      )}
       <div class="grid gap-3 md:grid-cols-2">
         <label class="field-block">
           <span class="field-label">Inicio</span>
@@ -371,13 +419,15 @@ function contractForm(snapshot, editor) {
           <input class="field" data-mask="currency" name="deposit_amount" inputmode="numeric" placeholder="R$ 0,00" value="${fieldValue(editor?.deposit_amount)}" />
         </label>
       </div>
-      <label class="field-block">
-        <span class="field-label">Status</span>
-        <select class="field" name="status">
+      ${searchableSelectField(
+        "Status",
+        "status",
+        "Buscar status...",
+        `
           <option value="active" ${selectedOption(editor?.status ?? "active", "active")}>Ativo</option>
           <option value="closed" ${selectedOption(editor?.status, "closed")}>Encerrado</option>
-        </select>
-      </label>
+        `
+      )}
       <button class="btn-primary w-full" type="submit">
         ${isEditing ? "Salvar alteracoes" : "Criar contrato"}
       </button>
