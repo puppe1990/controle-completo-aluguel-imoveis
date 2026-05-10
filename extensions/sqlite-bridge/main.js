@@ -51,6 +51,10 @@ function handleCommand(command, payload = {}) {
     case "receivables.pay":
       repository.recordPayment(payload.id, payload);
       return repository.snapshot();
+    case "settings.export":
+      return repository.exportData(payload.today);
+    case "settings.import":
+      return repository.importData(payload.backup);
     default:
       throw new Error(`Comando desconhecido: ${command}`);
   }

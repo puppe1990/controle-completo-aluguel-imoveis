@@ -11,7 +11,9 @@
     "build:css": "tailwindcss -i ./resources/styles/input.css -o ./resources/styles/output.css --minify",
     "build:assets": "npm run copy:neutralino && npm run build:css",
     "neutralino:update": "neu update",
-    "dev": "npm run build:assets && neu run",
+    "dev:css": "tailwindcss -i ./resources/styles/input.css -o ./resources/styles/output.css --minify --watch",
+    "dev:app": "neu run",
+    "dev": "node scripts/dev.js",
     "build": "npm run build:assets && neu build --release",
     "lint": "eslint .",
     "format": "prettier . --write",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "@neutralinojs/neu": "^11.7.1",
     "@tailwindcss/cli": "^4.1.13",
+    "chokidar": "^5.0.0",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
     "husky": "^9.1.7",

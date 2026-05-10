@@ -18,6 +18,11 @@ npm test
 npm run dev
 ```
 
+No desenvolvimento:
+
+- alteracoes em `resources/` fazem hot reload via `neu run`
+- alteracoes em `src/`, `extensions/`, `neutralino.config.json` e `package.json` reiniciam o app automaticamente
+
 ## O que o app cobre
 
 - Cadastro de proprietarios

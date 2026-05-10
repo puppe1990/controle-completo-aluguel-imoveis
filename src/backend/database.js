@@ -10,6 +10,29 @@ function computeStatus(baseStatus, dueDate, today) {
   return dueDate < today ? "overdue" : "pending";
 }
 
+function assertTransferCollection(name, value) {
+  if (Array.isArray(value)) {
+    return;
+  }
+  throw new Error(
+    `Colecao invalida para ${name}: ${JSON.stringify(value)}. Esperado: array.`
+  );
+}
+
+function assertTransferSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") {
+    throw new Error(
+      `Snapshot invalido: ${JSON.stringify(snapshot)}. Esperado: objeto com colecoes do backup.`
+    );
+  }
+
+  assertTransferCollection("owners", snapshot.owners);
+  assertTransferCollection("tenants", snapshot.tenants);
+  assertTransferCollection("properties", snapshot.properties);
+  assertTransferCollection("contracts", snapshot.contracts);
+  assertTransferCollection("receivables", snapshot.receivables);
+}
+
 export class RentalRepository {
   constructor(databasePath = ":memory:") {
     if (databasePath !== ":memory:") {
@@ -407,6 +430,97 @@ export class RentalRepository {
     });
 
     return this.snapshot();
+  }
+
+  exportData(today = new Date().toISOString().slice(0, 10)) {
+    return {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      snapshot: this.snapshot(today),
+    };
+  }
+
+  importData(backup) {
+    assertTransferSnapshot(backup?.snapshot);
+    const importBackup = this.db.transaction(() => {
+      this.clearImportedData();
+      this.importOwners(backup.snapshot.owners);
+      this.importTenants(backup.snapshot.tenants);
+      this.importProperties(backup.snapshot.properties);
+      this.importContracts(backup.snapshot.contracts);
+      this.importReceivables(backup.snapshot.receivables);
+    });
+    importBackup();
+    return this.snapshot();
+  }
+
+  clearImportedData() {
+    this.db.prepare(`DELETE FROM receivables`).run();
+    this.db.prepare(`DELETE FROM contracts`).run();
+    this.db.prepare(`DELETE FROM properties`).run();
+    this.db.prepare(`DELETE FROM tenants`).run();
+    this.db.prepare(`DELETE FROM owners`).run();
+  }
+
+  importOwners(owners) {
+    const statement = this.db.prepare(`
+      INSERT INTO owners (id, name, document, phone, email, notes, created_at)
+      VALUES (@id, @name, @document, @phone, @email, @notes, @created_at)
+    `);
+    for (const owner of owners) {
+      statement.run(owner);
+    }
+  }
+
+  importTenants(tenants) {
+    const statement = this.db.prepare(`
+      INSERT INTO tenants (id, name, document, phone, email, status, created_at)
+      VALUES (@id, @name, @document, @phone, @email, @status, @created_at)
+    `);
+    for (const tenant of tenants) {
+      statement.run(tenant);
+    }
+  }
+
+  importProperties(properties) {
+    const statement = this.db.prepare(`
+      INSERT INTO properties (
+        id, owner_id, code, title, address, city, state, monthly_rent, status, created_at
+      ) VALUES (
+        @id, @owner_id, @code, @title, @address, @city, @state, @monthly_rent, @status, @created_at
+      )
+    `);
+    for (const property of properties) {
+      statement.run(property);
+    }
+  }
+
+  importContracts(contracts) {
+    const statement = this.db.prepare(`
+      INSERT INTO contracts (
+        id, property_id, owner_id, tenant_id, type, start_date, end_date, due_day,
+        rent_amount, deposit_amount, status, created_at
+      ) VALUES (
+        @id, @property_id, @owner_id, @tenant_id, @type, @start_date, @end_date, @due_day,
+        @rent_amount, @deposit_amount, @status, @created_at
+      )
+    `);
+    for (const contract of contracts) {
+      statement.run(contract);
+    }
+  }
+
+  importReceivables(receivables) {
+    const statement = this.db.prepare(`
+      INSERT INTO receivables (
+        id, contract_id, reference_month, due_date, amount, status, received_at, notes, created_at
+      ) VALUES (
+        @id, @contract_id, @reference_month, @due_date, @amount, @status, @received_at, @notes, @created_at
+      )
+    `);
+    for (const receivable of receivables) {
+      statement.run(receivable);
+    }
   }
 
   snapshot(today = new Date().toISOString().slice(0, 10)) {

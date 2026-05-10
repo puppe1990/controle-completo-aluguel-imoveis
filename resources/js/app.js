@@ -1,12 +1,7 @@
+import { ROUTES, getRouteFromHashValue } from "./app-routes.js";
+import { renderSettingsPage } from "./settings-page.js";
+
 const EXTENSION_ID = "js.imobiliaria.sqlite";
-const ROUTES = [
-  { id: "dashboard", label: "Dashboard", eyebrow: "Visao geral" },
-  { id: "owners", label: "Proprietarios", eyebrow: "Cadastro" },
-  { id: "tenants", label: "Inquilinos", eyebrow: "Cadastro" },
-  { id: "properties", label: "Imoveis", eyebrow: "Patrimonio" },
-  { id: "contracts", label: "Contratos", eyebrow: "Locacao" },
-  { id: "receivables", label: "Recebiveis", eyebrow: "Financeiro" },
-];
 
 const state = {
   route: "dashboard",
@@ -47,8 +42,7 @@ function formToObject(form) {
 }
 
 function getRouteFromHash() {
-  const route = window.location.hash.replace(/^#\/?/, "");
-  return ROUTES.some((item) => item.id === route) ? route : "dashboard";
+  return getRouteFromHashValue(window.location.hash);
 }
 
 async function initNeutralino() {
@@ -544,6 +538,37 @@ function dashboardPage() {
   `;
 }
 
+function settingsPage() {
+  return renderSettingsPage();
+}
+
+function downloadBackupFile(backup) {
+  const content = JSON.stringify(backup, null, 2);
+  const blob = new Blob([content], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "imobiliaria-backup.json";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportBackup() {
+  setStatus("Gerando backup...");
+  const backup = await state.api.request("settings.export");
+  downloadBackupFile(backup);
+  setStatus("Backup exportado");
+}
+
+async function importBackupFile(file) {
+  setStatus("Importando backup...");
+  const content = await file.text();
+  const backup = JSON.parse(content);
+  const snapshot = await state.api.request("settings.import", { backup });
+  await refreshSnapshot(snapshot);
+  setStatus("Backup importado");
+}
+
 function renderCurrentRoute() {
   const view = document.getElementById("app-view");
   const pages = {
@@ -553,6 +578,7 @@ function renderCurrentRoute() {
     properties: propertiesPage,
     contracts: contractsPage,
     receivables: receivablesPage,
+    settings: settingsPage,
   };
 
   view.innerHTML = pages[state.route]();
@@ -607,10 +633,25 @@ function attachEvents() {
     if (event.target.id === "seed-demo") {
       const snapshot = await state.api.request("seedDemo");
       await refreshSnapshot(snapshot);
+      return;
+    }
+
+    if (event.target.id === "settings-export") {
+      await exportBackup();
     }
   });
 
-  document.body.addEventListener("change", (event) => {
+  document.body.addEventListener("change", async (event) => {
+    if (event.target.id === "settings-import-file") {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      await importBackupFile(file);
+      event.target.value = "";
+      return;
+    }
+
     if (event.target.id !== "contract-property-select") {
       return;
     }
