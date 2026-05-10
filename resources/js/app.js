@@ -17,6 +17,7 @@ import {
   selectSearchableOption,
 } from "./searchable-select.js";
 import { renderSettingsPage } from "./settings-page.js";
+import { translateReceivableStatus } from "./receivable-status-label.js";
 import { submitFeedback } from "./submit-feedback.js";
 
 const EXTENSION_ID = "js.imobiliaria.sqlite";
@@ -35,6 +36,7 @@ const state = {
   },
   api: null,
   deleteModal: null,
+  receivablePaymentCancelModal: null,
   snapshot: {
     owners: [],
     tenants: [],
@@ -55,7 +57,7 @@ function currency(value = 0) {
   }).format(Number(value));
 }
 
-function statusPill(status) {
+function statusPill(status, label = status) {
   const map = {
     paid: "bg-emerald-100 text-emerald-800",
     pending: "bg-amber-100 text-amber-900",
@@ -65,7 +67,7 @@ function statusPill(status) {
     active: "bg-emerald-100 text-emerald-800",
     closed: "bg-stone-900 text-white",
   };
-  return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${map[status] ?? "bg-stone-100 text-stone-700"}">${status}</span>`;
+  return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${map[status] ?? "bg-stone-100 text-stone-700"}">${label}</span>`;
 }
 
 function formToObject(form) {
@@ -244,11 +246,11 @@ function receivablesTable(receivables) {
                   <td class="px-3 py-4">${row.tenant_name}</td>
                   <td class="px-3 py-4">${row.due_date}</td>
                   <td class="px-3 py-4 font-medium">${currency(row.amount)}</td>
-                  <td class="px-3 py-4">${statusPill(row.status_label)}</td>
+                  <td class="px-3 py-4">${statusPill(row.status_label, translateReceivableStatus(row.status_label))}</td>
                   <td class="px-3 py-4">
                     ${
                       row.status_label === "paid"
-                        ? '<span class="text-xs text-stone-400">Liquidado</span>'
+                        ? `<button class="btn-secondary receivable-unpay-button !px-3 !py-2 text-xs" data-id="${row.id}" type="button">Cancelar</button>`
                         : `<button class="btn-secondary pay-button !px-3 !py-2 text-xs" data-id="${row.id}">Registrar pagamento</button>`
                     }
                   </td>
@@ -358,7 +360,9 @@ function currentRouteView() {
 
 function renderCurrentRoute() {
   document.getElementById("app-view").innerHTML =
-    currentRouteView() + renderDeleteModal();
+    currentRouteView() +
+    renderDeleteModal() +
+    renderReceivablePaymentCancelModal();
   const appView = document.getElementById("app-view");
   enhanceSearchableSelects(appView);
   applyInputMasks(appView, {
@@ -597,6 +601,16 @@ function closeDeleteModal() {
   renderApp();
 }
 
+function openReceivablePaymentCancelModal(id) {
+  state.receivablePaymentCancelModal = { id };
+  renderApp();
+}
+
+function closeReceivablePaymentCancelModal() {
+  state.receivablePaymentCancelModal = null;
+  renderApp();
+}
+
 function renderDeleteModal() {
   if (!state.deleteModal) {
     return "";
@@ -621,6 +635,27 @@ function renderDeleteModal() {
   `;
 }
 
+function renderReceivablePaymentCancelModal() {
+  if (!state.receivablePaymentCancelModal) {
+    return "";
+  }
+  return `
+    <div class="modal-backdrop" data-receivable-unpay-modal-close="true">
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="receivable-unpay-modal-title">
+        <p class="section-eyebrow">Confirmacao de cancelamento</p>
+        <h3 id="receivable-unpay-modal-title" class="modal-title">Tem certeza que deseja cancelar a liquidacao?</h3>
+        <p class="modal-copy">
+          Essa acao remove a baixa deste recebivel e devolve o status para pendente.
+        </p>
+        <div class="modal-actions">
+          <button class="btn-secondary" data-receivable-unpay-cancel="true" type="button">Voltar</button>
+          <button class="btn-danger" data-receivable-unpay-confirm="true" type="button">Cancelar liquidacao</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 async function confirmCrudDelete() {
   const { entity, id } = state.deleteModal;
   const command =
@@ -628,6 +663,13 @@ async function confirmCrudDelete() {
   const payload = entity === "settings-reset" ? {} : { id };
   const snapshot = await state.api.request(command, payload);
   state.deleteModal = null;
+  refreshSnapshot(snapshot);
+}
+
+async function confirmReceivablePaymentCancel() {
+  const { id } = state.receivablePaymentCancelModal;
+  const snapshot = await state.api.request("receivables.unpay", { id });
+  state.receivablePaymentCancelModal = null;
   refreshSnapshot(snapshot);
 }
 
@@ -739,6 +781,21 @@ function attachClickEvents() {
       return;
     }
 
+    if (event.target.matches("[data-receivable-unpay-modal-close]")) {
+      closeReceivablePaymentCancelModal();
+      return;
+    }
+
+    if (event.target.closest("[data-receivable-unpay-cancel]")) {
+      closeReceivablePaymentCancelModal();
+      return;
+    }
+
+    if (event.target.closest("[data-receivable-unpay-confirm]")) {
+      await runUiTask(confirmReceivablePaymentCancel);
+      return;
+    }
+
     const payButton = event.target.closest(".pay-button");
     if (payButton) {
       await runUiTask(async () => {
@@ -747,6 +804,14 @@ function attachClickEvents() {
         });
         refreshSnapshot(snapshot);
       });
+      return;
+    }
+
+    const receivableUnpayButton = event.target.closest(
+      ".receivable-unpay-button"
+    );
+    if (receivableUnpayButton) {
+      openReceivablePaymentCancelModal(receivableUnpayButton.dataset.id);
       return;
     }
 

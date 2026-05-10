@@ -712,6 +712,29 @@ export class RentalRepository {
       .get(Number(id));
   }
 
+  cancelPayment(id) {
+    const result = this.db
+      .prepare(
+        `
+        UPDATE receivables
+        SET status = 'pending',
+            received_at = NULL
+        WHERE id = @id AND status = 'paid'
+      `
+      )
+      .run({ id: Number(id) });
+
+    if (!result.changes) {
+      throw new Error(
+        `Nao foi possivel cancelar o recebimento: receivable.id=${JSON.stringify(id)}. Esperado: conta a receber liquidada existente.`
+      );
+    }
+
+    return this.db
+      .prepare(`SELECT * FROM receivables WHERE id = ?`)
+      .get(Number(id));
+  }
+
   getSummary(today = new Date().toISOString().slice(0, 10)) {
     const totals = this.db
       .prepare(

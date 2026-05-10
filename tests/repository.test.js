@@ -53,6 +53,26 @@ describe("RentalRepository", () => {
     expect(summary.overdue_total).toBe(0);
   });
 
+  it("cancels a paid receivable and restores pending totals", () => {
+    const repository = new RentalRepository(":memory:");
+    const snapshot = repository.seedDemoData();
+    const paid = snapshot.receivables.find(
+      (item) => item.status_label === "paid"
+    );
+
+    repository.cancelPayment(paid.id);
+
+    const receivable = repository.listContractReceivables(paid.contract_id)[0];
+    const summary = repository.getSummary("2026-02-10");
+    expect(receivable).toMatchObject({
+      id: paid.id,
+      status: "pending",
+      received_at: null,
+    });
+    expect(summary.received_total).toBe(0);
+    expect(summary.overdue_total).toBe(6400);
+  });
+
   it("updates contract receivables and keeps paid months", () => {
     const repository = new RentalRepository(":memory:");
     const snapshot = repository.seedDemoData();
