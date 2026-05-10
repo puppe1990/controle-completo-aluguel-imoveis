@@ -14,7 +14,7 @@
     "dev:css": "tailwindcss -i ./resources/styles/input.css -o ./resources/styles/output.css --minify --watch",
     "dev:app": "neu run",
     "dev": "node scripts/dev.js",
-    "build": "npm run build:assets && neu build --release",
+    "build": "npm run build:assets && neu build --release && node scripts/copy-runtime-source.js",
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
