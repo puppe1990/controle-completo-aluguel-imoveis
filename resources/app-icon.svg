@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cardGradient" x1="88" y1="72" x2="424" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6DEAF" />
+      <stop offset="0.55" stop-color="#E4B464" />
+      <stop offset="1" stop-color="#C7832A" />
+    </linearGradient>
+  </defs>
+
+  <rect x="40" y="40" width="432" height="432" rx="104" fill="#FFF6E7" />
+  <rect x="72" y="72" width="368" height="368" rx="88" fill="url(#cardGradient)" />
+  <polygon points="154,223 256,142 358,223" fill="#FBE8BF" />
+  <polygon points="170,223 256,155 342,223" fill="#5C3A17" />
+  <rect x="170" y="219" width="172" height="134" rx="34" fill="#5C3A17" />
+  <rect x="213" y="230" width="86" height="123" rx="24" fill="#FFF8EC" />
+  <rect x="231" y="249" width="17" height="17" rx="4.5" fill="#D9983C" />
+  <rect x="264" y="249" width="17" height="17" rx="4.5" fill="#D9983C" />
+  <rect x="231" y="282" width="17" height="17" rx="4.5" fill="#D9983C" />
+  <rect x="264" y="282" width="17" height="17" rx="4.5" fill="#D9983C" />
+  <path d="M302 278C302 263.088 314.088 251 329 251H345C359.912 251 372 263.088 372 278V289C372 303.912 359.912 316 345 316H329C314.088 316 302 303.912 302 289V278Z" fill="#FBE8BF" />
+  <circle cx="337" cy="283.5" r="10.5" fill="#7A5227" />
+  <rect x="167" y="348" width="178" height="24" rx="12" fill="#F6E3BA" />
+</svg>

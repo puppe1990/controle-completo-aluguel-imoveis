@@ -17,6 +17,7 @@
   "nativeAllowList": [
     "app.*",
     "clipboard.*",
+    "filesystem.*",
     "os.*",
     "window.*",
     "extensions.*"
@@ -33,7 +34,7 @@
       "alwaysOnTop": false,
       "enableInspector": true,
       "borderless": false,
-      "maximize": false,
+      "maximize": true,
       "hidden": false,
       "resizable": true,
       "exitProcessOnClose": true
