@@ -1,0 +1,9 @@
+bin/
+dist/
+node_modules/
+.data/
+.tmp/
+resources/js/neutralino.js
+resources/js/neutralino.d.ts
+resources/styles/output.css
+package-lock.json

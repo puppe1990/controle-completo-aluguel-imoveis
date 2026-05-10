@@ -103,9 +103,11 @@ export class RentalRepository {
       document: input.document ?? null,
       phone: input.phone ?? null,
       email: input.email ?? null,
-      notes: input.notes ?? null
+      notes: input.notes ?? null,
     });
-    return this.db.prepare(`SELECT * FROM owners WHERE id = ?`).get(result.lastInsertRowid);
+    return this.db
+      .prepare(`SELECT * FROM owners WHERE id = ?`)
+      .get(result.lastInsertRowid);
   }
 
   listTenants() {
@@ -122,19 +124,23 @@ export class RentalRepository {
       document: input.document ?? null,
       phone: input.phone ?? null,
       email: input.email ?? null,
-      status: input.status ?? "active"
+      status: input.status ?? "active",
     });
-    return this.db.prepare(`SELECT * FROM tenants WHERE id = ?`).get(result.lastInsertRowid);
+    return this.db
+      .prepare(`SELECT * FROM tenants WHERE id = ?`)
+      .get(result.lastInsertRowid);
   }
 
   listProperties() {
     return this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT properties.*, owners.name AS owner_name
         FROM properties
         INNER JOIN owners ON owners.id = properties.owner_id
         ORDER BY properties.code
-      `)
+      `
+      )
       .all();
   }
 
@@ -151,14 +157,17 @@ export class RentalRepository {
       city: input.city,
       state: input.state,
       monthly_rent: Number(input.monthly_rent),
-      status: input.status ?? "available"
+      status: input.status ?? "available",
     });
-    return this.db.prepare(`SELECT * FROM properties WHERE id = ?`).get(result.lastInsertRowid);
+    return this.db
+      .prepare(`SELECT * FROM properties WHERE id = ?`)
+      .get(result.lastInsertRowid);
   }
 
   listContracts() {
     return this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT contracts.*,
                owners.name AS owner_name,
                tenants.name AS tenant_name,
@@ -169,25 +178,30 @@ export class RentalRepository {
         INNER JOIN tenants ON tenants.id = contracts.tenant_id
         INNER JOIN properties ON properties.id = contracts.property_id
         ORDER BY contracts.start_date DESC
-      `)
+      `
+      )
       .all();
   }
 
   createContract(input) {
-    const property = this.db.prepare(`SELECT * FROM properties WHERE id = ?`).get(Number(input.property_id));
+    const property = this.db
+      .prepare(`SELECT * FROM properties WHERE id = ?`)
+      .get(Number(input.property_id));
     if (!property) {
       throw new Error("Imovel nao encontrado");
     }
 
     const createContract = this.db.transaction(() => {
       const result = this.db
-        .prepare(`
+        .prepare(
+          `
           INSERT INTO contracts (
             property_id, owner_id, tenant_id, type, start_date, end_date, due_day, rent_amount, deposit_amount, status
           ) VALUES (
             @property_id, @owner_id, @tenant_id, @type, @start_date, @end_date, @due_day, @rent_amount, @deposit_amount, @status
           )
-        `)
+        `
+        )
         .run({
           property_id: Number(input.property_id),
           owner_id: Number(property.owner_id),
@@ -198,7 +212,7 @@ export class RentalRepository {
           due_day: Number(input.due_day),
           rent_amount: Number(input.rent_amount),
           deposit_amount: Number(input.deposit_amount ?? 0),
-          status: input.status ?? "active"
+          status: input.status ?? "active",
         });
 
       const contractId = Number(result.lastInsertRowid);
@@ -206,7 +220,7 @@ export class RentalRepository {
         start_date: input.start_date,
         end_date: input.end_date,
         due_day: Number(input.due_day),
-        rent_amount: Number(input.rent_amount)
+        rent_amount: Number(input.rent_amount),
       });
 
       const insertReceivable = this.db.prepare(`
@@ -220,7 +234,7 @@ export class RentalRepository {
           reference_month: receivable.reference_month,
           due_date: receivable.due_date,
           amount: receivable.amount,
-          status: receivable.status
+          status: receivable.status,
         });
       }
 
@@ -228,7 +242,9 @@ export class RentalRepository {
         .prepare(`UPDATE properties SET status = 'rented' WHERE id = ?`)
         .run(Number(input.property_id));
 
-      return this.db.prepare(`SELECT * FROM contracts WHERE id = ?`).get(contractId);
+      return this.db
+        .prepare(`SELECT * FROM contracts WHERE id = ?`)
+        .get(contractId);
     });
 
     return createContract();
@@ -236,7 +252,8 @@ export class RentalRepository {
 
   listReceivables(today = new Date().toISOString().slice(0, 10)) {
     return this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT receivables.*,
                contracts.rent_amount,
                owners.name AS owner_name,
@@ -249,39 +266,46 @@ export class RentalRepository {
         INNER JOIN tenants ON tenants.id = contracts.tenant_id
         INNER JOIN properties ON properties.id = contracts.property_id
         ORDER BY receivables.due_date ASC
-      `)
+      `
+      )
       .all()
       .map((row) => ({
         ...row,
-        status_label: computeStatus(row.status, row.due_date, today)
+        status_label: computeStatus(row.status, row.due_date, today),
       }));
   }
 
   recordPayment(id, payload = {}) {
     const result = this.db
-      .prepare(`
+      .prepare(
+        `
         UPDATE receivables
         SET status = 'paid',
             received_at = @received_at,
             notes = COALESCE(@notes, notes)
         WHERE id = @id
-      `)
+      `
+      )
       .run({
         id: Number(id),
-        received_at: payload.received_at ?? new Date().toISOString().slice(0, 10),
-        notes: payload.notes ?? null
+        received_at:
+          payload.received_at ?? new Date().toISOString().slice(0, 10),
+        notes: payload.notes ?? null,
       });
 
     if (!result.changes) {
       throw new Error("Conta a receber nao encontrada");
     }
 
-    return this.db.prepare(`SELECT * FROM receivables WHERE id = ?`).get(Number(id));
+    return this.db
+      .prepare(`SELECT * FROM receivables WHERE id = ?`)
+      .get(Number(id));
   }
 
   getSummary(today = new Date().toISOString().slice(0, 10)) {
     const totals = this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT
           (SELECT COUNT(*) FROM owners) AS owners,
           (SELECT COUNT(*) FROM tenants) AS tenants,
@@ -289,27 +313,31 @@ export class RentalRepository {
           (SELECT COUNT(*) FROM contracts WHERE status = 'active') AS active_contracts,
           (SELECT COALESCE(SUM(amount), 0) FROM receivables) AS expected_total,
           (SELECT COALESCE(SUM(amount), 0) FROM receivables WHERE status = 'paid') AS received_total
-      `)
+      `
+      )
       .get();
 
     const overdue = this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT COUNT(*) AS overdue_count, COALESCE(SUM(amount), 0) AS overdue_total
         FROM receivables
         WHERE status != 'paid' AND due_date < ?
-      `)
+      `
+      )
       .get(today);
 
     return {
       ...totals,
       overdue_count: overdue.overdue_count,
-      overdue_total: overdue.overdue_total
+      overdue_total: overdue.overdue_total,
     };
   }
 
   getOwnerPerformance(today = new Date().toISOString().slice(0, 10)) {
     return this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT
           owners.id,
           owners.name,
@@ -323,12 +351,15 @@ export class RentalRepository {
         LEFT JOIN receivables ON receivables.contract_id = contracts.id
         GROUP BY owners.id, owners.name
         ORDER BY owners.name
-      `)
+      `
+      )
       .all(today);
   }
 
   seedDemoData() {
-    const alreadySeeded = this.db.prepare(`SELECT COUNT(*) AS total FROM owners`).get();
+    const alreadySeeded = this.db
+      .prepare(`SELECT COUNT(*) AS total FROM owners`)
+      .get();
     if (alreadySeeded.total > 0) {
       return this.snapshot();
     }
@@ -337,14 +368,14 @@ export class RentalRepository {
       name: "Mariana Costa",
       document: "123.456.789-00",
       phone: "(11) 99888-2211",
-      email: "mariana@imobiliaria.local"
+      email: "mariana@imobiliaria.local",
     });
 
     const tenant = this.createTenant({
       name: "Carlos Menezes",
       document: "987.654.321-00",
       phone: "(11) 97777-5544",
-      email: "carlos@cliente.local"
+      email: "carlos@cliente.local",
     });
 
     const property = this.createProperty({
@@ -354,7 +385,7 @@ export class RentalRepository {
       address: "Rua das Palmeiras, 101",
       city: "Sao Paulo",
       state: "SP",
-      monthly_rent: 3200
+      monthly_rent: 3200,
     });
 
     this.createContract({
@@ -364,11 +395,16 @@ export class RentalRepository {
       end_date: "2026-12-31",
       due_day: 5,
       rent_amount: 3200,
-      deposit_amount: 3200
+      deposit_amount: 3200,
     });
 
-    const firstReceivable = this.db.prepare(`SELECT id FROM receivables ORDER BY id LIMIT 1`).get();
-    this.recordPayment(firstReceivable.id, { received_at: "2026-01-05", notes: "Recebido via pix" });
+    const firstReceivable = this.db
+      .prepare(`SELECT id FROM receivables ORDER BY id LIMIT 1`)
+      .get();
+    this.recordPayment(firstReceivable.id, {
+      received_at: "2026-01-05",
+      notes: "Recebido via pix",
+    });
 
     return this.snapshot();
   }
@@ -381,7 +417,7 @@ export class RentalRepository {
       contracts: this.listContracts(),
       receivables: this.listReceivables(today),
       summary: this.getSummary(today),
-      ownerPerformance: this.getOwnerPerformance(today)
+      ownerPerformance: this.getOwnerPerformance(today),
     };
   }
 }
