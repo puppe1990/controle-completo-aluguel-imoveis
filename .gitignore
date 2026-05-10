@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.data/
+.tmp/
+bin/
+neutralinojs.log
+resources/styles/output.css
