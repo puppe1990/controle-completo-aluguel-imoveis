@@ -129,6 +129,26 @@ function createButton(entity, label) {
   `;
 }
 
+/**
+ * Renders the report export actions for a CRUD list route.
+ * Example: renderReportExportActions("owners");
+ */
+export function renderReportExportActions(route) {
+  return `
+    <div class="row-actions">
+      <button class="btn-secondary !px-3 !py-2 text-xs" data-report-export="${route}" data-report-format="excel" type="button">
+        Excel
+      </button>
+      <button class="btn-secondary !px-3 !py-2 text-xs" data-report-export="${route}" data-report-format="pdf" type="button">
+        PDF
+      </button>
+      <button class="btn-secondary !px-3 !py-2 text-xs" data-report-export="${route}" data-report-format="csv" type="button">
+        CSV
+      </button>
+    </div>
+  `;
+}
+
 function ownerForm(editor) {
   const isEditing = Boolean(editor?.id);
   return `
@@ -198,7 +218,8 @@ function ownersPage(snapshot, editor) {
         "Lista de proprietarios",
         `${snapshot.owners.length} registro(s) na base`,
         `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], ownerRows(snapshot.owners))}</div>`,
-        createButton("owners", "Novo proprietario")
+        createButton("owners", "Novo proprietario") +
+          renderReportExportActions("owners")
       )}
       ${formSection}
     </div>
@@ -469,7 +490,8 @@ function contractsPage(snapshot, editor) {
         "Contratos",
         `${snapshot.contracts.length} registro(s) na operacao`,
         `<div class="table-shell">${crudTable(["Imovel", "Inquilino", "Periodo", "Vencimento", "Valor", "Status", ""], contractRows(snapshot.contracts))}</div>`,
-        createButton("contracts", "Novo contrato")
+        createButton("contracts", "Novo contrato") +
+          renderReportExportActions("contracts")
       )}
       ${formSection}
     </div>
@@ -491,7 +513,8 @@ function propertiesPage(snapshot, editor) {
         "Portfolio de imoveis",
         `${snapshot.properties.length} unidade(s) administrada(s)`,
         `<div class="table-shell">${crudTable(["Codigo", "Nome", "Proprietario", "Cidade/UF", "Aluguel", "Status", ""], propertyRows(snapshot.properties))}</div>`,
-        createButton("properties", "Novo imovel")
+        createButton("properties", "Novo imovel") +
+          renderReportExportActions("properties")
       )}
       ${formSection}
     </div>
@@ -513,7 +536,8 @@ function tenantsPage(snapshot, editor) {
         "Lista de inquilinos",
         `${snapshot.tenants.length} registro(s) na base`,
         `<div class="table-shell">${crudTable(["Nome", "Documento", "Telefone", "E-mail", "Status", ""], tenantRows(snapshot.tenants))}</div>`,
-        createButton("tenants", "Novo inquilino")
+        createButton("tenants", "Novo inquilino") +
+          renderReportExportActions("tenants")
       )}
       ${formSection}
     </div>

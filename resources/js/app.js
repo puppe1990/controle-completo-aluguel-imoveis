@@ -6,7 +6,12 @@ import {
   normalizeFormPayload,
 } from "./rental-form-formatters.js";
 import { readBackupFile, saveBackupFile } from "./backup-transfer.js";
-import { renderCrudFormRoute, renderCrudRoute } from "./rental-page-views.js";
+import { exportRouteReport } from "./report-export.js";
+import {
+  renderCrudFormRoute,
+  renderCrudRoute,
+  renderReportExportActions,
+} from "./rental-page-views.js";
 import {
   clearSearchableSelection,
   closeSearchableSelects,
@@ -118,7 +123,7 @@ function emptyState(message) {
   return `<div class="empty-state">${message}</div>`;
 }
 
-function pageSection(title, description, content) {
+function pageSection(title, description, content, actions = "") {
   return `
     <section class="panel page-section">
       <div class="section-heading">
@@ -126,6 +131,7 @@ function pageSection(title, description, content) {
           <p class="section-eyebrow">${description}</p>
           <h3 class="section-title">${title}</h3>
         </div>
+        ${actions}
       </div>
       ${content}
     </section>
@@ -330,7 +336,12 @@ function dashboardPage() {
 function receivablesPage() {
   return `
     <div class="page-stack">
-      ${pageSection("Contas a receber", "Financeiro", receivablesTable(state.snapshot.receivables))}
+      ${pageSection(
+        "Contas a receber",
+        "Financeiro",
+        receivablesTable(state.snapshot.receivables),
+        renderReportExportActions("receivables")
+      )}
       ${pageSection("Relatorio por proprietario", "Consolidado", ownerPerformanceTable(state.snapshot.ownerPerformance))}
     </div>
   `;
@@ -704,6 +715,22 @@ async function importBackup() {
   showToast("Backup importado com sucesso.");
 }
 
+async function exportCurrentRouteReport(route, format) {
+  setStatus(`Gerando relatorio ${format.toUpperCase()}...`);
+  const hasExported = await exportRouteReport(
+    route,
+    format,
+    state.snapshot,
+    Neutralino
+  );
+  if (!hasExported) {
+    setStatus("Exportacao cancelada");
+    return;
+  }
+  setStatus(`Relatorio ${format.toUpperCase()} exportado`);
+  showToast(`Relatorio ${format.toUpperCase()} exportado com sucesso.`);
+}
+
 async function runUiTask(task) {
   try {
     await task();
@@ -840,6 +867,17 @@ function attachClickEvents() {
 
     if (event.target.id === "settings-import") {
       await runUiTask(importBackup);
+      return;
+    }
+
+    const reportExportButton = event.target.closest("[data-report-export]");
+    if (reportExportButton) {
+      await runUiTask(() =>
+        exportCurrentRouteReport(
+          reportExportButton.dataset.reportExport,
+          reportExportButton.dataset.reportFormat
+        )
+      );
       return;
     }
 

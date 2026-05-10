@@ -1,3 +1,5 @@
+import { normalizeSelectedPath } from "./dialog-file-path.js";
+
 const JSON_FILE_FILTERS = [
   {
     name: "Arquivos JSON",
@@ -21,26 +23,6 @@ function parseBackupContent(content) {
       `Backup invalido: value="${backupPreview(content)}" expected="JSON serializado pelo app"`
     );
   }
-}
-
-function normalizeSelectedPath(selection) {
-  if (!selection) {
-    return null;
-  }
-  if (typeof selection === "string") {
-    return selection;
-  }
-  if (Array.isArray(selection)) {
-    if (!selection.length) {
-      return null;
-    }
-    if (typeof selection[0] === "string") {
-      return selection[0];
-    }
-  }
-  throw new Error(
-    `Selecao de arquivo invalida: value="${backupPreview(JSON.stringify(selection))}" expected="string ou string[]"`
-  );
 }
 
 /**

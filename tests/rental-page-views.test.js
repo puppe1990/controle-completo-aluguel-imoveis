@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   renderCrudFormRoute,
   renderCrudRoute,
+  renderReportExportActions,
 } from "../resources/js/rental-page-views.js";
 
 describe("rental-page-views", () => {
@@ -34,5 +35,26 @@ describe("rental-page-views", () => {
     );
 
     expect(html).toContain("Salvar proprietario");
+  });
+
+  it("renders report export actions for managed routes", () => {
+    const ownersHtml = renderCrudRoute(
+      "owners",
+      {
+        owners: [],
+        tenants: [],
+        properties: [],
+        contracts: [],
+      },
+      {}
+    );
+
+    expect(renderReportExportActions("receivables")).toContain(
+      'data-report-export="receivables"'
+    );
+    expect(ownersHtml).toContain('data-report-export="owners"');
+    expect(ownersHtml).toContain('data-report-format="excel"');
+    expect(ownersHtml).toContain('data-report-format="pdf"');
+    expect(ownersHtml).toContain('data-report-format="csv"');
   });
 });
