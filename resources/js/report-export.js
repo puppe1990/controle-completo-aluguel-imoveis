@@ -1,5 +1,6 @@
 import { normalizeSelectedPath } from "./dialog-file-path.js";
 import { translateReceivableStatus } from "./receivable-status-label.js";
+import { translateSystemStatus } from "./system-status-label.js";
 
 const REPORT_FILE_FILTERS = {
   csv: [{ name: "Arquivos CSV", extensions: ["csv"] }],
@@ -29,7 +30,7 @@ const REPORT_BUILDERS = {
         tenant.document,
         tenant.phone,
         tenant.email,
-        tenant.status,
+        translateSystemStatus(tenant.status),
       ]),
   },
   properties: {
@@ -53,7 +54,7 @@ const REPORT_BUILDERS = {
         property.city,
         property.state,
         property.monthly_rent,
-        property.status,
+        translateSystemStatus(property.status),
       ]),
   },
   contracts: {
@@ -79,7 +80,7 @@ const REPORT_BUILDERS = {
         contract.due_day,
         contract.rent_amount,
         contract.deposit_amount,
-        contract.status,
+        translateSystemStatus(contract.status),
       ]),
   },
   receivables: {

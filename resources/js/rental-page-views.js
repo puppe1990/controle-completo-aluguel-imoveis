@@ -3,6 +3,7 @@ import {
   createInitialListingState,
 } from "./listing-state.js";
 import { translateReceivableStatus } from "./receivable-status-label.js";
+import { translateSystemStatus } from "./system-status-label.js";
 
 function currency(value = 0) {
   return new Intl.NumberFormat("pt-BR", {
@@ -460,7 +461,7 @@ function ownerRows(owners) {
           <td class="px-3 py-4">${escapeHtml(owner.document ?? "Sem documento")}</td>
           <td class="px-3 py-4">${escapeHtml(owner.phone ?? "Sem telefone")}</td>
           <td class="px-3 py-4">${escapeHtml(owner.email ?? "Sem e-mail")}</td>
-          <td class="px-3 py-4">${statusPill("active")}</td>
+          <td class="px-3 py-4">${statusPill("active", translateSystemStatus("active"))}</td>
           <td class="px-3 py-4">${actionButtons("owners", owner.id)}</td>
         </tr>
       `
@@ -544,7 +545,7 @@ function tenantRows(tenants) {
           <td class="px-3 py-4">${escapeHtml(tenant.document ?? "Sem documento")}</td>
           <td class="px-3 py-4">${escapeHtml(tenant.phone ?? "Sem telefone")}</td>
           <td class="px-3 py-4">${escapeHtml(tenant.email ?? "Sem e-mail")}</td>
-          <td class="px-3 py-4">${statusPill(tenant.status ?? "active")}</td>
+          <td class="px-3 py-4">${statusPill(tenant.status ?? "active", translateSystemStatus(tenant.status ?? "active"))}</td>
           <td class="px-3 py-4">${actionButtons("tenants", tenant.id)}</td>
         </tr>
       `
@@ -632,7 +633,7 @@ function propertyRows(properties) {
           <td class="px-3 py-4">${escapeHtml(property.owner_name)}</td>
           <td class="px-3 py-4">${escapeHtml(property.city)}/${escapeHtml(property.state)}</td>
           <td class="px-3 py-4">${currency(property.monthly_rent)}</td>
-          <td class="px-3 py-4">${statusPill(property.status)}</td>
+          <td class="px-3 py-4">${statusPill(property.status, translateSystemStatus(property.status))}</td>
           <td class="px-3 py-4">${actionButtons("properties", property.id)}</td>
         </tr>
       `
@@ -734,7 +735,7 @@ function contractRows(contracts) {
           <td class="px-3 py-4">${escapeHtml(contract.start_date)} ate ${escapeHtml(contract.end_date)}</td>
           <td class="px-3 py-4">Dia ${escapeHtml(contract.due_day)}</td>
           <td class="px-3 py-4">${currency(contract.rent_amount)}</td>
-          <td class="px-3 py-4">${statusPill(contract.status)}</td>
+          <td class="px-3 py-4">${statusPill(contract.status, translateSystemStatus(contract.status))}</td>
           <td class="px-3 py-4">${actionButtons("contracts", contract.id)}</td>
         </tr>
       `

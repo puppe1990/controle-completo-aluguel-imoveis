@@ -137,4 +137,31 @@ describe("rental-page-views", () => {
     expect(receivablesHtml).toContain('data-listing-header-sort="receivables"');
     expect(receivablesHtml).toContain('data-sort-field="amount"');
   });
+
+  it("renders translated status labels in CRUD tables", () => {
+    const html = renderCrudRoute(
+      "properties",
+      {
+        owners: [],
+        tenants: [],
+        properties: [
+          {
+            id: 3,
+            code: "APT-1",
+            title: "Apartamento 1",
+            owner_name: "Ana",
+            city: "Sao Paulo",
+            state: "SP",
+            monthly_rent: 1200,
+            status: "available",
+          },
+        ],
+        contracts: [],
+      },
+      {}
+    );
+
+    expect(html).toContain(">Disponivel<");
+    expect(html).not.toContain(">available<");
+  });
 });

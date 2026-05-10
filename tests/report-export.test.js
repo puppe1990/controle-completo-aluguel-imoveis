@@ -55,6 +55,34 @@ describe("report-export", () => {
     );
   });
 
+  it("exports translated system statuses in csv reports", async () => {
+    const neutralino = createNeutralinoDouble("/tmp/inquilinos.csv");
+
+    await exportRouteReport(
+      "tenants",
+      "csv",
+      {
+        ...createSnapshot(),
+        tenants: [
+          {
+            name: "Paulo Dias",
+            document: "456",
+            phone: "11988888888",
+            email: "paulo@teste.com",
+            status: "inactive",
+          },
+        ],
+      },
+      neutralino,
+      new Date("2026-05-10T00:00:00.000Z")
+    );
+
+    expect(neutralino.filesystem.writeFile).toHaveBeenCalledWith(
+      "/tmp/inquilinos.csv",
+      expect.stringContaining('"Inativo"')
+    );
+  });
+
   it("exports excel reports as xls html files", async () => {
     const neutralino = createNeutralinoDouble("/tmp/proprietarios.xls");
 
