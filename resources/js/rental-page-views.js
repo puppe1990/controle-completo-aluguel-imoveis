@@ -189,6 +189,44 @@ function listingToolbar(route, view, rows) {
   `;
 }
 
+function sortIndicator(direction) {
+  return direction === "desc" ? "↓" : "↑";
+}
+
+function sortableHeaderButton(route, column, activeSort) {
+  const isActive = activeSort.startsWith(`${column.sortField}:`);
+  const nextDirection = isActive
+    ? activeSort.endsWith(":desc")
+      ? "asc"
+      : "desc"
+    : column.defaultDirection;
+  const indicator = isActive ? sortIndicator(activeSort.split(":")[1]) : "↕";
+  const activeClass = isActive ? " text-stone-950" : " text-stone-500";
+  return `
+    <button
+      class="inline-flex items-center gap-1 font-medium${activeClass}"
+      data-listing-header-sort="${route}"
+      data-sort-field="${column.sortField}"
+      data-sort-direction="${nextDirection}"
+      type="button"
+    >
+      <span>${escapeHtml(column.label)}</span>
+      <span aria-hidden="true">${indicator}</span>
+    </button>
+  `;
+}
+
+function renderTableHeaderCell(route, column, activeSort) {
+  if (!column.sortField) {
+    return `<th class="px-3 py-3 font-medium">${escapeHtml(column.label)}</th>`;
+  }
+  return `
+    <th class="px-3 py-3 font-medium">
+      ${sortableHeaderButton(route, column, activeSort)}
+    </th>
+  `;
+}
+
 function listingPagination(route, view) {
   if (view.totalPages <= 1) {
     return "";
@@ -224,7 +262,6 @@ function managedTableSection(
   title,
   description,
   rows,
-  headers,
   body,
   cta
 ) {
@@ -232,7 +269,7 @@ function managedTableSection(
   const content = [
     listingToolbar(route, view, rows),
     listingSummary(view),
-    `<div class="table-shell">${crudTable(headers, body(view.rows))}</div>`,
+    `<div class="table-shell">${crudTable(route, view.columns, view.activeSort, body(view.rows))}</div>`,
     listingPagination(route, view),
   ].join("");
   return listPageSection(title, description, content, cta, route);
@@ -448,7 +485,6 @@ function ownersPage(snapshot, editor, listingState) {
         "Lista de proprietarios",
         `${snapshot.owners.length} registro(s) na base`,
         snapshot.owners,
-        ["Nome", "Documento", "Telefone", "E-mail", "Status", ""],
         ownerRows,
         createButton("owners", "Novo proprietario")
       )}
@@ -750,7 +786,6 @@ function contractsPage(snapshot, editor, listingState) {
         "Contratos",
         `${snapshot.contracts.length} registro(s) na operacao`,
         snapshot.contracts,
-        ["Imovel", "Inquilino", "Periodo", "Vencimento", "Valor", "Status", ""],
         contractRows,
         createButton("contracts", "Novo contrato")
       )}
@@ -776,15 +811,6 @@ function propertiesPage(snapshot, editor, listingState) {
         "Portfolio de imoveis",
         `${snapshot.properties.length} unidade(s) administrada(s)`,
         snapshot.properties,
-        [
-          "Codigo",
-          "Nome",
-          "Proprietario",
-          "Cidade/UF",
-          "Aluguel",
-          "Status",
-          "",
-        ],
         propertyRows,
         createButton("properties", "Novo imovel")
       )}
@@ -810,7 +836,6 @@ function tenantsPage(snapshot, editor, listingState) {
         "Lista de inquilinos",
         `${snapshot.tenants.length} registro(s) na base`,
         snapshot.tenants,
-        ["Nome", "Documento", "Telefone", "E-mail", "Status", ""],
         tenantRows,
         createButton("tenants", "Novo inquilino")
       )}
@@ -819,7 +844,7 @@ function tenantsPage(snapshot, editor, listingState) {
   `;
 }
 
-function crudTable(headers, body) {
+function crudTable(route, columns, activeSort, body) {
   if (body.startsWith("<div")) {
     return body;
   }
@@ -827,8 +852,8 @@ function crudTable(headers, body) {
     <table class="min-w-full text-left text-sm">
       <thead class="text-stone-500">
         <tr class="border-b border-stone-200">
-          ${headers
-            .map((header) => `<th class="px-3 py-3 font-medium">${header}</th>`)
+          ${columns
+            .map((column) => renderTableHeaderCell(route, column, activeSort))
             .join("")}
         </tr>
       </thead>
@@ -873,15 +898,6 @@ export function renderReceivablesRoute(snapshot, listingState) {
         "Contas a receber",
         "Financeiro",
         snapshot.receivables,
-        [
-          "Referencia",
-          "Imovel",
-          "Inquilino",
-          "Vencimento",
-          "Valor",
-          "Status",
-          "",
-        ],
         receivableRows,
         ""
       )}

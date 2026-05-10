@@ -13,7 +13,7 @@ import {
   renderOwnerPerformanceTable,
   renderReceivablesRoute,
 } from "./rental-page-views.js";
-import { createInitialListingState } from "./listing-state.js";
+import { createInitialListingState, nextListingSort } from "./listing-state.js";
 import {
   clearSearchableSelection,
   closeSearchableSelects,
@@ -871,6 +871,21 @@ function attachClickEvents() {
     if (pageButton) {
       updateListingState(pageButton.dataset.listingPage, {
         page: Number(pageButton.dataset.page),
+      });
+      return;
+    }
+
+    const sortButton = event.target.closest("[data-listing-header-sort]");
+    if (sortButton) {
+      const route = sortButton.dataset.listingHeaderSort;
+      const currentSort = state.listingViews[route]?.sort ?? "";
+      updateListingState(route, {
+        sort: nextListingSort(
+          currentSort,
+          sortButton.dataset.sortField,
+          sortButton.dataset.sortDirection
+        ),
+        page: 1,
       });
       return;
     }

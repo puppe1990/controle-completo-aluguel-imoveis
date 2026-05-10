@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildListingView,
   createInitialListingState,
+  nextListingSort,
 } from "../resources/js/listing-state.js";
 
 describe("listing-state", () => {
@@ -47,5 +48,44 @@ describe("listing-state", () => {
     expect(firstPage.totalPages).toBe(2);
     expect(secondPage.rows).toHaveLength(1);
     expect(secondPage.rows[0].amount).toBe(1);
+  });
+
+  it("sorts numeric strings as numbers instead of lexicographic text", () => {
+    const rows = [
+      {
+        id: 1,
+        amount: "2",
+        due_date: "2026-01-02",
+        reference_month: "2026-01",
+        property_code: "APT-2",
+        property_title: "Centro",
+        tenant_name: "Cliente 2",
+        status_label: "pending",
+      },
+      {
+        id: 2,
+        amount: "10",
+        due_date: "2026-01-10",
+        reference_month: "2026-01",
+        property_code: "APT-10",
+        property_title: "Centro",
+        tenant_name: "Cliente 10",
+        status_label: "pending",
+      },
+    ];
+
+    const view = buildListingView("receivables", rows, {
+      ...createInitialListingState("receivables"),
+      sort: "amount:desc",
+    });
+
+    expect(view.rows.map((row) => row.amount)).toEqual(["10", "2"]);
+  });
+
+  it("toggles the current sort and respects the default direction for a new field", () => {
+    expect(nextListingSort("amount:desc", "amount", "desc")).toBe("amount:asc");
+    expect(nextListingSort("due_date:asc", "amount", "desc")).toBe(
+      "amount:desc"
+    );
   });
 });

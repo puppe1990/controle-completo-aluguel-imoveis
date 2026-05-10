@@ -127,10 +127,14 @@ describe("rental-page-views", () => {
     expect(ownersHtml).toContain('data-searchable-free-text="true"');
     expect(ownersHtml).toContain('data-listing-filter="owners"');
     expect(ownersHtml).toContain('data-listing-sort="owners"');
+    expect(ownersHtml).toContain('data-listing-header-sort="owners"');
+    expect(ownersHtml).toContain('data-sort-field="name"');
     expect(receivablesHtml).toContain('data-listing-search="receivables"');
     expect(receivablesHtml).toContain(
       'data-listing-search-native="receivables"'
     );
     expect(receivablesHtml).toContain('data-report-export="receivables"');
+    expect(receivablesHtml).toContain('data-listing-header-sort="receivables"');
+    expect(receivablesHtml).toContain('data-sort-field="amount"');
   });
 });

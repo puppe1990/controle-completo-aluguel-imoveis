@@ -32,6 +32,14 @@ const STATUS_FILTERS = {
 
 const LISTING_CONFIG = {
   owners: {
+    columns: [
+      { label: "Nome", sortField: "name", defaultDirection: "asc" },
+      { label: "Documento" },
+      { label: "Telefone" },
+      { label: "E-mail" },
+      { label: "Status" },
+      { label: "" },
+    ],
     searchPlaceholder: "Buscar por nome, documento, telefone ou e-mail",
     searchFields: ["name", "document", "phone", "email"],
     filterLabel: "Documento",
@@ -43,6 +51,14 @@ const LISTING_CONFIG = {
     defaultSort: "name:asc",
   },
   tenants: {
+    columns: [
+      { label: "Nome", sortField: "name", defaultDirection: "asc" },
+      { label: "Documento" },
+      { label: "Telefone" },
+      { label: "E-mail" },
+      { label: "Status" },
+      { label: "" },
+    ],
     searchPlaceholder: "Buscar por nome, documento, telefone ou e-mail",
     searchFields: ["name", "document", "phone", "email"],
     filterLabel: "Status",
@@ -54,6 +70,19 @@ const LISTING_CONFIG = {
     defaultSort: "name:asc",
   },
   properties: {
+    columns: [
+      { label: "Codigo", sortField: "code", defaultDirection: "asc" },
+      { label: "Nome" },
+      { label: "Proprietario" },
+      { label: "Cidade/UF" },
+      {
+        label: "Aluguel",
+        sortField: "monthly_rent",
+        defaultDirection: "desc",
+      },
+      { label: "Status" },
+      { label: "" },
+    ],
     searchPlaceholder: "Buscar por codigo, imovel, proprietario ou cidade",
     searchFields: ["code", "title", "owner_name", "city", "state"],
     filterLabel: "Status",
@@ -66,6 +95,23 @@ const LISTING_CONFIG = {
     defaultSort: "code:asc",
   },
   contracts: {
+    columns: [
+      { label: "Imovel" },
+      { label: "Inquilino" },
+      {
+        label: "Periodo",
+        sortField: "start_date",
+        defaultDirection: "desc",
+      },
+      { label: "Vencimento" },
+      {
+        label: "Valor",
+        sortField: "rent_amount",
+        defaultDirection: "desc",
+      },
+      { label: "Status" },
+      { label: "" },
+    ],
     searchPlaceholder: "Buscar por imovel, inquilino ou periodo",
     searchFields: [
       "property_code",
@@ -84,6 +130,19 @@ const LISTING_CONFIG = {
     defaultSort: "start_date:desc",
   },
   receivables: {
+    columns: [
+      { label: "Referencia" },
+      { label: "Imovel" },
+      { label: "Inquilino" },
+      {
+        label: "Vencimento",
+        sortField: "due_date",
+        defaultDirection: "asc",
+      },
+      { label: "Valor", sortField: "amount", defaultDirection: "desc" },
+      { label: "Status" },
+      { label: "" },
+    ],
     searchPlaceholder: "Buscar por referencia, imovel ou inquilino",
     searchFields: [
       "reference_month",
@@ -109,6 +168,20 @@ function parseSort(sortValue, fallback) {
   return { field, direction: direction === "desc" ? "desc" : "asc" };
 }
 
+function isNumericValue(value) {
+  if (typeof value === "number") {
+    return !Number.isNaN(value);
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    return false;
+  }
+  return !Number.isNaN(Number(normalized));
+}
+
 function normalizeListingText(value = "") {
   return String(value)
     .normalize("NFD")
@@ -118,10 +191,22 @@ function normalizeListingText(value = "") {
 }
 
 function compareValues(left, right) {
-  if (typeof left === "number" || typeof right === "number") {
+  if (isNumericValue(left) || isNumericValue(right)) {
     return Number(left ?? 0) - Number(right ?? 0);
   }
   return String(left ?? "").localeCompare(String(right ?? ""), "pt-BR");
+}
+
+/**
+ * Resolves the next sort value for a clicked table header.
+ * Example: nextListingSort("amount:desc", "amount", "desc")
+ */
+export function nextListingSort(currentSort, field, defaultDirection = "asc") {
+  const { field: currentField, direction } = parseSort(currentSort, "");
+  if (currentField !== field) {
+    return `${field}:${defaultDirection}`;
+  }
+  return `${field}:${direction === "desc" ? "asc" : "desc"}`;
 }
 
 function matchesSearch(row, fields, search) {
@@ -194,6 +279,7 @@ export function buildListingView(route, rows, state) {
   const pagination = paginateRows(sortedRows, state.page, DEFAULT_PAGE_SIZE);
   return {
     ...config,
+    columns: config.columns,
     activeFilter: state.filter,
     activeSort: state.sort,
     activeSearch: state.search,
