@@ -33,6 +33,34 @@ function assertTransferSnapshot(snapshot) {
   assertTransferCollection("receivables", snapshot.receivables);
 }
 
+function assertExistingRecord(record, entityName, id) {
+  if (record) {
+    return record;
+  }
+  throw new Error(
+    `Registro ${entityName} nao encontrado para id=${JSON.stringify(id)}. Esperado: id existente.`
+  );
+}
+
+function assertPositiveInteger(value, fieldName) {
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+  throw new Error(
+    `Identificador invalido para ${fieldName}: ${JSON.stringify(value)}. Esperado: inteiro positivo.`
+  );
+}
+
+function assertDeletionWithoutLinks(total, entityName, id, linkedLabel) {
+  if (total === 0) {
+    return;
+  }
+  throw new Error(
+    `Nao foi possivel excluir ${entityName} id=${JSON.stringify(id)}. Esperado: nenhum ${linkedLabel} vinculado.`
+  );
+}
+
 export class RentalRepository {
   constructor(databasePath = ":memory:") {
     if (databasePath !== ":memory:") {
@@ -116,6 +144,11 @@ export class RentalRepository {
     return this.db.prepare(`SELECT * FROM owners ORDER BY name`).all();
   }
 
+  getOwnerById(id) {
+    const ownerId = assertPositiveInteger(id, "owner.id");
+    return this.db.prepare(`SELECT * FROM owners WHERE id = ?`).get(ownerId);
+  }
+
   createOwner(input) {
     const statement = this.db.prepare(`
       INSERT INTO owners (name, document, phone, email, notes)
@@ -133,8 +166,92 @@ export class RentalRepository {
       .get(result.lastInsertRowid);
   }
 
+  updateOwner(id, input) {
+    const ownerId = assertPositiveInteger(id, "owner.id");
+    assertExistingRecord(this.getOwnerById(ownerId), "owner", ownerId);
+    this.db
+      .prepare(
+        `
+        UPDATE owners
+        SET name = @name,
+            document = @document,
+            phone = @phone,
+            email = @email,
+            notes = @notes
+        WHERE id = @id
+      `
+      )
+      .run({
+        id: ownerId,
+        name: input.name,
+        document: input.document ?? null,
+        phone: input.phone ?? null,
+        email: input.email ?? null,
+        notes: input.notes ?? null,
+      });
+    return this.getOwnerById(ownerId);
+  }
+
+  listOwnerPropertyIds(ownerId) {
+    return this.db
+      .prepare(`SELECT id FROM properties WHERE owner_id = ?`)
+      .all(assertPositiveInteger(ownerId, "owner.id"))
+      .map((row) => row.id);
+  }
+
+  deleteReceivablesByPropertyIds(propertyIds) {
+    if (!propertyIds.length) {
+      return;
+    }
+    const placeholders = propertyIds.map(() => "?").join(", ");
+    this.db
+      .prepare(
+        `
+        DELETE FROM receivables
+        WHERE contract_id IN (
+          SELECT id FROM contracts WHERE property_id IN (${placeholders})
+        )
+      `
+      )
+      .run(...propertyIds);
+  }
+
+  deleteContractsByPropertyIds(propertyIds) {
+    if (!propertyIds.length) {
+      return;
+    }
+    const placeholders = propertyIds.map(() => "?").join(", ");
+    this.db
+      .prepare(`DELETE FROM contracts WHERE property_id IN (${placeholders})`)
+      .run(...propertyIds);
+  }
+
+  deletePropertiesByOwnerId(ownerId) {
+    this.db
+      .prepare(`DELETE FROM properties WHERE owner_id = ?`)
+      .run(assertPositiveInteger(ownerId, "owner.id"));
+  }
+
+  deleteOwner(id) {
+    const ownerId = assertPositiveInteger(id, "owner.id");
+    assertExistingRecord(this.getOwnerById(ownerId), "owner", ownerId);
+    const deleteOwnerTree = this.db.transaction(() => {
+      const propertyIds = this.listOwnerPropertyIds(ownerId);
+      this.deleteReceivablesByPropertyIds(propertyIds);
+      this.deleteContractsByPropertyIds(propertyIds);
+      this.deletePropertiesByOwnerId(ownerId);
+      this.db.prepare(`DELETE FROM owners WHERE id = ?`).run(ownerId);
+    });
+    deleteOwnerTree();
+  }
+
   listTenants() {
     return this.db.prepare(`SELECT * FROM tenants ORDER BY name`).all();
+  }
+
+  getTenantById(id) {
+    const tenantId = assertPositiveInteger(id, "tenant.id");
+    return this.db.prepare(`SELECT * FROM tenants WHERE id = ?`).get(tenantId);
   }
 
   createTenant(input) {
@@ -154,6 +271,47 @@ export class RentalRepository {
       .get(result.lastInsertRowid);
   }
 
+  updateTenant(id, input) {
+    const tenantId = assertPositiveInteger(id, "tenant.id");
+    assertExistingRecord(this.getTenantById(tenantId), "tenant", tenantId);
+    this.db
+      .prepare(
+        `
+        UPDATE tenants
+        SET name = @name,
+            document = @document,
+            phone = @phone,
+            email = @email,
+            status = @status
+        WHERE id = @id
+      `
+      )
+      .run({
+        id: tenantId,
+        name: input.name,
+        document: input.document ?? null,
+        phone: input.phone ?? null,
+        email: input.email ?? null,
+        status: input.status ?? "active",
+      });
+    return this.getTenantById(tenantId);
+  }
+
+  deleteTenant(id) {
+    const tenantId = assertPositiveInteger(id, "tenant.id");
+    assertExistingRecord(this.getTenantById(tenantId), "tenant", tenantId);
+    const linkedContracts = this.db
+      .prepare(`SELECT COUNT(*) AS total FROM contracts WHERE tenant_id = ?`)
+      .get(tenantId);
+    assertDeletionWithoutLinks(
+      linkedContracts.total,
+      "tenant",
+      tenantId,
+      "contrato"
+    );
+    this.db.prepare(`DELETE FROM tenants WHERE id = ?`).run(tenantId);
+  }
+
   listProperties() {
     return this.db
       .prepare(
@@ -165,6 +323,13 @@ export class RentalRepository {
       `
       )
       .all();
+  }
+
+  getPropertyById(id) {
+    const propertyId = assertPositiveInteger(id, "property.id");
+    return this.db
+      .prepare(`SELECT * FROM properties WHERE id = ?`)
+      .get(propertyId);
   }
 
   createProperty(input) {
@@ -187,6 +352,71 @@ export class RentalRepository {
       .get(result.lastInsertRowid);
   }
 
+  updateProperty(id, input) {
+    const propertyId = assertPositiveInteger(id, "property.id");
+    assertExistingRecord(
+      this.getPropertyById(propertyId),
+      "property",
+      propertyId
+    );
+    const propertyOwnerId = assertPositiveInteger(
+      input.owner_id,
+      "property.owner_id"
+    );
+    const updatePropertyOwner = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `
+          UPDATE properties
+          SET owner_id = @owner_id,
+              code = @code,
+              title = @title,
+              address = @address,
+              city = @city,
+              state = @state,
+              monthly_rent = @monthly_rent,
+              status = @status
+          WHERE id = @id
+        `
+        )
+        .run({
+          id: propertyId,
+          owner_id: propertyOwnerId,
+          code: input.code,
+          title: input.title,
+          address: input.address,
+          city: input.city,
+          state: input.state,
+          monthly_rent: Number(input.monthly_rent),
+          status: input.status ?? "available",
+        });
+      this.db
+        .prepare(`UPDATE contracts SET owner_id = ? WHERE property_id = ?`)
+        .run(propertyOwnerId, propertyId);
+    });
+    updatePropertyOwner();
+    return this.getPropertyById(propertyId);
+  }
+
+  deleteProperty(id) {
+    const propertyId = assertPositiveInteger(id, "property.id");
+    assertExistingRecord(
+      this.getPropertyById(propertyId),
+      "property",
+      propertyId
+    );
+    const linkedContracts = this.db
+      .prepare(`SELECT COUNT(*) AS total FROM contracts WHERE property_id = ?`)
+      .get(propertyId);
+    assertDeletionWithoutLinks(
+      linkedContracts.total,
+      "property",
+      propertyId,
+      "contrato"
+    );
+    this.db.prepare(`DELETE FROM properties WHERE id = ?`).run(propertyId);
+  }
+
   listContracts() {
     return this.db
       .prepare(
@@ -206,13 +436,112 @@ export class RentalRepository {
       .all();
   }
 
-  createContract(input) {
-    const property = this.db
-      .prepare(`SELECT * FROM properties WHERE id = ?`)
-      .get(Number(input.property_id));
-    if (!property) {
-      throw new Error("Imovel nao encontrado");
+  getContractById(id) {
+    const contractId = assertPositiveInteger(id, "contract.id");
+    return this.db
+      .prepare(`SELECT * FROM contracts WHERE id = ?`)
+      .get(contractId);
+  }
+
+  listContractReceivables(contractId) {
+    return this.db
+      .prepare(
+        `SELECT * FROM receivables WHERE contract_id = ? ORDER BY due_date ASC`
+      )
+      .all(assertPositiveInteger(contractId, "contract.id"));
+  }
+
+  syncPropertyRentalStatus(propertyId) {
+    const activeContracts = this.db
+      .prepare(
+        `
+        SELECT COUNT(*) AS total
+        FROM contracts
+        WHERE property_id = ? AND status = 'active'
+      `
+      )
+      .get(assertPositiveInteger(propertyId, "property.id"));
+    const nextStatus = activeContracts.total > 0 ? "rented" : "available";
+    this.db
+      .prepare(`UPDATE properties SET status = ? WHERE id = ?`)
+      .run(nextStatus, propertyId);
+  }
+
+  upsertContractReceivable(contractId, scheduleRow, existingMap) {
+    const matched = existingMap.get(scheduleRow.reference_month);
+    if (!matched) {
+      this.db
+        .prepare(
+          `
+          INSERT INTO receivables (contract_id, reference_month, due_date, amount, status)
+          VALUES (@contract_id, @reference_month, @due_date, @amount, @status)
+        `
+        )
+        .run({
+          contract_id: contractId,
+          reference_month: scheduleRow.reference_month,
+          due_date: scheduleRow.due_date,
+          amount: scheduleRow.amount,
+          status: scheduleRow.status,
+        });
+      return;
     }
+
+    this.db
+      .prepare(
+        `
+        UPDATE receivables
+        SET due_date = @due_date,
+            amount = @amount,
+            status = @status,
+            received_at = @received_at,
+            notes = @notes
+        WHERE id = @id
+      `
+      )
+      .run({
+        id: matched.id,
+        due_date: scheduleRow.due_date,
+        amount: scheduleRow.amount,
+        status: matched.status === "paid" ? "paid" : scheduleRow.status,
+        received_at: matched.received_at ?? null,
+        notes: matched.notes ?? null,
+      });
+    existingMap.delete(scheduleRow.reference_month);
+  }
+
+  deleteRemovedContractReceivables(contractId, existingMap) {
+    for (const receivable of existingMap.values()) {
+      if (receivable.status === "paid") {
+        throw new Error(
+          `Nao foi possivel reduzir o contrato id=${JSON.stringify(contractId)}. Esperado: nenhuma parcela paga fora do novo periodo.`
+        );
+      }
+      this.db
+        .prepare(`DELETE FROM receivables WHERE id = ?`)
+        .run(receivable.id);
+    }
+  }
+
+  rebuildContractReceivables(contractId, scheduleRows) {
+    const existingMap = new Map(
+      this.listContractReceivables(contractId).map((row) => [
+        row.reference_month,
+        row,
+      ])
+    );
+    for (const scheduleRow of scheduleRows) {
+      this.upsertContractReceivable(contractId, scheduleRow, existingMap);
+    }
+    this.deleteRemovedContractReceivables(contractId, existingMap);
+  }
+
+  createContract(input) {
+    const property = assertExistingRecord(
+      this.getPropertyById(input.property_id),
+      "property",
+      input.property_id
+    );
 
     const createContract = this.db.transaction(() => {
       const result = this.db
@@ -246,24 +575,8 @@ export class RentalRepository {
         rent_amount: Number(input.rent_amount),
       });
 
-      const insertReceivable = this.db.prepare(`
-        INSERT INTO receivables (contract_id, reference_month, due_date, amount, status)
-        VALUES (@contract_id, @reference_month, @due_date, @amount, @status)
-      `);
-
-      for (const receivable of receivables) {
-        insertReceivable.run({
-          contract_id: contractId,
-          reference_month: receivable.reference_month,
-          due_date: receivable.due_date,
-          amount: receivable.amount,
-          status: receivable.status,
-        });
-      }
-
-      this.db
-        .prepare(`UPDATE properties SET status = 'rented' WHERE id = ?`)
-        .run(Number(input.property_id));
+      this.rebuildContractReceivables(contractId, receivables);
+      this.syncPropertyRentalStatus(input.property_id);
 
       return this.db
         .prepare(`SELECT * FROM contracts WHERE id = ?`)
@@ -271,6 +584,80 @@ export class RentalRepository {
     });
 
     return createContract();
+  }
+
+  updateContract(id, input) {
+    const contractId = assertPositiveInteger(id, "contract.id");
+    const currentContract = assertExistingRecord(
+      this.getContractById(contractId),
+      "contract",
+      contractId
+    );
+    const property = assertExistingRecord(
+      this.getPropertyById(input.property_id),
+      "property",
+      input.property_id
+    );
+    const updateContractWithSchedule = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `
+          UPDATE contracts
+          SET property_id = @property_id,
+              owner_id = @owner_id,
+              tenant_id = @tenant_id,
+              start_date = @start_date,
+              end_date = @end_date,
+              due_day = @due_day,
+              rent_amount = @rent_amount,
+              deposit_amount = @deposit_amount,
+              status = @status
+          WHERE id = @id
+        `
+        )
+        .run({
+          id: contractId,
+          property_id: Number(input.property_id),
+          owner_id: Number(property.owner_id),
+          tenant_id: Number(input.tenant_id),
+          start_date: input.start_date,
+          end_date: input.end_date,
+          due_day: Number(input.due_day),
+          rent_amount: Number(input.rent_amount),
+          deposit_amount: Number(input.deposit_amount ?? 0),
+          status: input.status ?? "active",
+        });
+
+      const receivables = buildReceivablesSchedule({
+        start_date: input.start_date,
+        end_date: input.end_date,
+        due_day: Number(input.due_day),
+        rent_amount: Number(input.rent_amount),
+      });
+
+      this.rebuildContractReceivables(contractId, receivables);
+      this.syncPropertyRentalStatus(currentContract.property_id);
+      this.syncPropertyRentalStatus(input.property_id);
+    });
+    updateContractWithSchedule();
+    return this.getContractById(contractId);
+  }
+
+  deleteContract(id) {
+    const contractId = assertPositiveInteger(id, "contract.id");
+    const contract = assertExistingRecord(
+      this.getContractById(contractId),
+      "contract",
+      contractId
+    );
+    const deleteContractWithReceivables = this.db.transaction(() => {
+      this.db
+        .prepare(`DELETE FROM receivables WHERE contract_id = ?`)
+        .run(contractId);
+      this.db.prepare(`DELETE FROM contracts WHERE id = ?`).run(contractId);
+      this.syncPropertyRentalStatus(contract.property_id);
+    });
+    deleteContractWithReceivables();
   }
 
   listReceivables(today = new Date().toISOString().slice(0, 10)) {
@@ -438,6 +825,11 @@ export class RentalRepository {
       exported_at: new Date().toISOString(),
       snapshot: this.snapshot(today),
     };
+  }
+
+  resetData() {
+    this.clearImportedData();
+    return this.snapshot();
   }
 
   importData(backup) {

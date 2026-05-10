@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ROUTES, getRouteFromHashValue } from "../resources/js/app-routes.js";
+import {
+  ROUTES,
+  getRouteContextFromHash,
+  getRouteFromHashValue,
+} from "../resources/js/app-routes.js";
 import { renderSettingsPage } from "../resources/js/settings-page.js";
 
 describe("settings route", () => {
@@ -11,6 +15,16 @@ describe("settings route", () => {
     });
     expect(getRouteFromHashValue("#/settings")).toBe("settings");
     expect(getRouteFromHashValue("#/missing")).toBe("dashboard");
+    expect(getRouteContextFromHash("#/tenants/new")).toMatchObject({
+      route: "tenants",
+      action: "new",
+      recordId: null,
+    });
+    expect(getRouteContextFromHash("#/tenants/12/edit")).toMatchObject({
+      route: "tenants",
+      action: "edit",
+      recordId: "12",
+    });
   });
 
   it("renders seed, export and import actions", () => {
@@ -19,8 +33,11 @@ describe("settings route", () => {
     expect(html).toContain("Popular com dados de exemplo");
     expect(html).toContain("Exportar dados");
     expect(html).toContain("Importar dados");
+    expect(html).toContain("Danger zone");
+    expect(html).toContain("Deletar toda a base");
     expect(html).toContain('id="seed-demo"');
     expect(html).toContain('id="settings-export"');
     expect(html).toContain('id="settings-import-file"');
+    expect(html).toContain('id="settings-reset"');
   });
 });

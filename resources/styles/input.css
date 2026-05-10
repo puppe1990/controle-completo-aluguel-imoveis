@@ -76,6 +76,40 @@ body {
     color 160ms ease;
 }
 
+.btn-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f59e0b;
+  border-radius: 1rem;
+  background: #fffbeb;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b45309;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fca5a5;
+  border-radius: 1rem;
+  background: #fff1f2;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #be123c;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
 .stat-card {
   border: 1px solid rgba(214, 211, 209, 0.8);
   border-radius: 1.5rem;
@@ -97,6 +131,18 @@ body {
 .btn-secondary:hover {
   border-color: #0c0a09;
   color: #0c0a09;
+}
+
+.btn-warning:hover {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.btn-danger:hover {
+  border-color: #e11d48;
+  background: #ffe4e6;
+  color: #9f1239;
 }
 
 .app-sidebar {
@@ -219,6 +265,20 @@ body {
   gap: 0.85rem;
 }
 
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #57534e;
+}
+
 .field-area {
   min-height: 110px;
   resize: vertical;
@@ -257,6 +317,52 @@ body {
   overflow-x: auto;
   border: 1px solid #e7e5e4;
   border-radius: 1.25rem;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(28, 25, 23, 0.48);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  width: min(100%, 480px);
+  border: 1px solid rgba(214, 211, 209, 0.9);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgba(28, 25, 23, 0.22);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0c0a09;
+}
+
+.modal-copy {
+  margin-top: 0.75rem;
+  color: #57534e;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 .empty-state {

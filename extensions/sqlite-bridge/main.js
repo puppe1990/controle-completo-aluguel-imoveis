@@ -39,14 +39,38 @@ function handleCommand(command, payload = {}) {
     case "owners.create":
       repository.createOwner(payload);
       return repository.snapshot();
+    case "owners.update":
+      repository.updateOwner(payload.id, payload);
+      return repository.snapshot();
+    case "owners.delete":
+      repository.deleteOwner(payload.id);
+      return repository.snapshot();
     case "tenants.create":
       repository.createTenant(payload);
+      return repository.snapshot();
+    case "tenants.update":
+      repository.updateTenant(payload.id, payload);
+      return repository.snapshot();
+    case "tenants.delete":
+      repository.deleteTenant(payload.id);
       return repository.snapshot();
     case "properties.create":
       repository.createProperty(payload);
       return repository.snapshot();
+    case "properties.update":
+      repository.updateProperty(payload.id, payload);
+      return repository.snapshot();
+    case "properties.delete":
+      repository.deleteProperty(payload.id);
+      return repository.snapshot();
     case "contracts.create":
       repository.createContract(payload);
+      return repository.snapshot();
+    case "contracts.update":
+      repository.updateContract(payload.id, payload);
+      return repository.snapshot();
+    case "contracts.delete":
+      repository.deleteContract(payload.id);
       return repository.snapshot();
     case "receivables.pay":
       repository.recordPayment(payload.id, payload);
@@ -55,6 +79,8 @@ function handleCommand(command, payload = {}) {
       return repository.exportData(payload.today);
     case "settings.import":
       return repository.importData(payload.backup);
+    case "settings.reset":
+      return repository.resetData();
     default:
       throw new Error(`Comando desconhecido: ${command}`);
   }
