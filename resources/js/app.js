@@ -324,7 +324,9 @@ function currentRouteView() {
 function renderCurrentRoute() {
   document.getElementById("app-view").innerHTML =
     currentRouteView() + renderDeleteModal();
-  applyInputMasks(document.getElementById("app-view"));
+  applyInputMasks(document.getElementById("app-view"), {
+    storedValue: true,
+  });
 }
 
 function renderApp() {
@@ -617,7 +619,7 @@ function attachChangeEvents() {
       return;
     }
     rentField.value = selected.dataset.rent;
-    applyInputMask(rentField);
+    applyInputMask(rentField, { storedValue: true });
   });
 }
 

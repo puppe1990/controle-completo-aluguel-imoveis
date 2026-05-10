@@ -47,16 +47,31 @@ function numericCents(value = "") {
   return digitsOnly(value).slice(0, 12);
 }
 
+function formatBrlAmount(amount) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+}
+
 export function formatCurrencyInputValue(value = "") {
   const cents = numericCents(value);
   if (!cents) {
     return "";
   }
   const amount = Number(cents) / 100;
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(amount);
+  return formatBrlAmount(amount);
+}
+
+export function formatStoredCurrencyValue(value = "") {
+  if (value === "") {
+    return "";
+  }
+  const amount = Number(value);
+  if (Number.isNaN(amount)) {
+    return "";
+  }
+  return formatBrlAmount(amount);
 }
 
 export function parseCurrencyInputValue(value = "") {
@@ -131,7 +146,8 @@ export function normalizeFormPayload(formId, payload) {
   return normalizeBasePayload(payload);
 }
 
-export function applyInputMask(field) {
+export function applyInputMask(field, options = {}) {
+  const { storedValue = false } = options;
   if (field.dataset.mask === "document") {
     field.value = formatDocumentValue(field.value);
     return;
@@ -141,7 +157,9 @@ export function applyInputMask(field) {
     return;
   }
   if (field.dataset.mask === "currency") {
-    field.value = formatCurrencyInputValue(field.value);
+    field.value = storedValue
+      ? formatStoredCurrencyValue(field.value)
+      : formatCurrencyInputValue(field.value);
     return;
   }
   if (field.dataset.mask === "state") {
@@ -153,6 +171,8 @@ export function applyInputMask(field) {
   }
 }
 
-export function applyInputMasks(root = document) {
-  root.querySelectorAll("[data-mask]").forEach(applyInputMask);
+export function applyInputMasks(root = document, options = {}) {
+  root
+    .querySelectorAll("[data-mask]")
+    .forEach((field) => applyInputMask(field, options));
 }

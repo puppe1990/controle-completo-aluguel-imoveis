@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyInputMask,
   formatCurrencyInputValue,
   formatDocumentValue,
   formatPhoneValue,
@@ -7,6 +8,13 @@ import {
   normalizeStateValue,
   parseCurrencyInputValue,
 } from "../resources/js/rental-form-formatters.js";
+
+class FakeMaskedField {
+  constructor(mask, value) {
+    this.dataset = { mask };
+    this.value = value;
+  }
+}
 
 describe("rental-form-formatters", () => {
   it("formats cpf and cnpj values", () => {
@@ -18,6 +26,17 @@ describe("rental-form-formatters", () => {
     expect(formatPhoneValue("11987654321")).toBe("(11) 98765-4321");
     expect(formatCurrencyInputValue("123456")).toBe("R$ 1.234,56");
     expect(parseCurrencyInputValue("R$ 1.234,56")).toBe(1234.56);
+  });
+
+  it("preserves stored currency amounts when applying the mask", () => {
+    const storedValueField = new FakeMaskedField("currency", "3200");
+    const typedDigitsField = new FakeMaskedField("currency", "3200");
+
+    applyInputMask(storedValueField, { storedValue: true });
+    applyInputMask(typedDigitsField);
+
+    expect(storedValueField.value).toBe("R$ 3.200,00");
+    expect(typedDigitsField.value).toBe("R$ 32,00");
   });
 
   it("normalizes property payload with uppercase state and money", () => {
