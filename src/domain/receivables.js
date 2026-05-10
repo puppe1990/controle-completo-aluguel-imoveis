@@ -1,4 +1,9 @@
-import { clampDay, formatDate, normalizeDate, toMonthKey } from "./date-utils.js";
+import {
+  clampDay,
+  formatDate,
+  normalizeDate,
+  toMonthKey,
+} from "./date-utils.js";
 
 export function buildReceivablesSchedule(contract) {
   const startDate = normalizeDate(contract.start_date);
@@ -17,7 +22,7 @@ export function buildReceivablesSchedule(contract) {
         reference_month: toMonthKey(formatDate(dueDate)),
         due_date: formatDate(dueDate),
         amount: Number(contract.rent_amount),
-        status: "pending"
+        status: "pending",
       });
     }
     cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
@@ -28,7 +33,7 @@ export function buildReceivablesSchedule(contract) {
       reference_month: toMonthKey(contract.start_date),
       due_date: contract.start_date,
       amount: Number(contract.rent_amount),
-      status: "pending"
+      status: "pending",
     });
   }
 

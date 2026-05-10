@@ -13,7 +13,7 @@ describe("RentalRepository", () => {
       address: "Rua Um, 10",
       city: "Campinas",
       state: "SP",
-      monthly_rent: 2500
+      monthly_rent: 2500,
     });
 
     repository.createContract({
@@ -23,7 +23,7 @@ describe("RentalRepository", () => {
       end_date: "2026-03-31",
       due_day: 8,
       rent_amount: 2500,
-      deposit_amount: 2500
+      deposit_amount: 2500,
     });
 
     const receivables = repository.listReceivables("2026-02-10");
@@ -35,14 +35,16 @@ describe("RentalRepository", () => {
       properties: 1,
       active_contracts: 1,
       expected_total: 7500,
-      overdue_total: 5000
+      overdue_total: 5000,
     });
   });
 
   it("marks a receivable as paid and updates the summary", () => {
     const repository = new RentalRepository(":memory:");
     const snapshot = repository.seedDemoData();
-    const pending = snapshot.receivables.find((item) => item.status_label !== "paid");
+    const pending = snapshot.receivables.find(
+      (item) => item.status_label !== "paid"
+    );
 
     repository.recordPayment(pending.id, { received_at: "2026-02-05" });
     const summary = repository.getSummary("2026-02-10");

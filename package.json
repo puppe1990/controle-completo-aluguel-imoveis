@@ -5,6 +5,7 @@
   "type": "module",
   "description": "App desktop para gestão imobiliária com Neutralinojs, Tailwind, JavaScript e SQLite.",
   "scripts": {
+    "prepare": "husky",
     "postinstall": "npm run copy:neutralino",
     "copy:neutralino": "node scripts/copy-neutralino-lib.js",
     "build:css": "tailwindcss -i ./resources/styles/input.css -o ./resources/styles/output.css --minify",
@@ -12,7 +13,11 @@
     "neutralino:update": "neu update",
     "dev": "npm run build:assets && neu run",
     "build": "npm run build:assets && neu build --release",
-    "test": "vitest run"
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "vitest run",
+    "check": "npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
     "@neutralinojs/lib": "^6.7.0",
@@ -21,6 +26,10 @@
   "devDependencies": {
     "@neutralinojs/neu": "^11.7.1",
     "@tailwindcss/cli": "^4.1.13",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
     "vitest": "^3.2.4"
   }

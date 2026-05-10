@@ -14,12 +14,7 @@
     "enabled": true,
     "writeToLogFile": true
   },
-  "nativeAllowList": [
-    "app.*",
-    "os.*",
-    "window.*",
-    "extensions.*"
-  ],
+  "nativeAllowList": ["app.*", "os.*", "window.*", "extensions.*"],
   "modes": {
     "window": {
       "title": "Controle Completo de Aluguel de Imoveis",

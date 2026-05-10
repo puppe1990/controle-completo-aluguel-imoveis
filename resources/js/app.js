@@ -5,7 +5,7 @@ const ROUTES = [
   { id: "tenants", label: "Inquilinos", eyebrow: "Cadastro" },
   { id: "properties", label: "Imoveis", eyebrow: "Patrimonio" },
   { id: "contracts", label: "Contratos", eyebrow: "Locacao" },
-  { id: "receivables", label: "Recebiveis", eyebrow: "Financeiro" }
+  { id: "receivables", label: "Recebiveis", eyebrow: "Financeiro" },
 ];
 
 const state = {
@@ -17,15 +17,15 @@ const state = {
     contracts: [],
     receivables: [],
     summary: {},
-    ownerPerformance: []
+    ownerPerformance: [],
   },
-  api: null
+  api: null,
 };
 
 function currency(value = 0) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
-    currency: "BRL"
+    currency: "BRL",
   }).format(Number(value));
 }
 
@@ -36,7 +36,7 @@ function statusPill(status) {
     overdue: "bg-rose-100 text-rose-800",
     rented: "bg-stone-900 text-white",
     available: "bg-stone-100 text-stone-700",
-    active: "bg-emerald-100 text-emerald-800"
+    active: "bg-emerald-100 text-emerald-800",
   };
   return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${map[status] ?? "bg-stone-100 text-stone-700"}">${status}</span>`;
 }
@@ -91,10 +91,10 @@ function createBackendClient() {
         Neutralino.extensions.dispatch(EXTENSION_ID, "backend:request", {
           requestId,
           command,
-          payload
+          payload,
         });
       });
-    }
+    },
   };
 }
 
@@ -144,7 +144,7 @@ function summaryCards(summary = {}) {
     { label: "Imoveis", value: summary.properties ?? 0 },
     { label: "Contratos ativos", value: summary.active_contracts ?? 0 },
     { label: "Recebido", value: currency(summary.received_total ?? 0) },
-    { label: "Em atraso", value: currency(summary.overdue_total ?? 0) }
+    { label: "Em atraso", value: currency(summary.overdue_total ?? 0) },
   ];
 
   return `
@@ -270,13 +270,21 @@ function tenantsPage() {
 
 function propertyOwnerOptions() {
   return ['<option value="">Selecione o proprietario</option>']
-    .concat(state.snapshot.owners.map((owner) => `<option value="${owner.id}">${owner.name}</option>`))
+    .concat(
+      state.snapshot.owners.map(
+        (owner) => `<option value="${owner.id}">${owner.name}</option>`
+      )
+    )
     .join("");
 }
 
 function contractTenantOptions() {
   return ['<option value="">Selecione o inquilino</option>']
-    .concat(state.snapshot.tenants.map((tenant) => `<option value="${tenant.id}">${tenant.name}</option>`))
+    .concat(
+      state.snapshot.tenants.map(
+        (tenant) => `<option value="${tenant.id}">${tenant.name}</option>`
+      )
+    )
     .join("");
 }
 
@@ -544,7 +552,7 @@ function renderCurrentRoute() {
     tenants: tenantsPage,
     properties: propertiesPage,
     contracts: contractsPage,
-    receivables: receivablesPage
+    receivables: receivablesPage,
   };
 
   view.innerHTML = pages[state.route]();
@@ -576,7 +584,7 @@ function attachEvents() {
       "owner-form": "owners.create",
       "tenant-form": "tenants.create",
       "property-form": "properties.create",
-      "contract-form": "contracts.create"
+      "contract-form": "contracts.create",
     };
     const command = commandMap[form.id];
     if (!command) {
@@ -589,7 +597,9 @@ function attachEvents() {
   document.body.addEventListener("click", async (event) => {
     const payButton = event.target.closest(".pay-button");
     if (payButton) {
-      const snapshot = await state.api.request("receivables.pay", { id: payButton.dataset.id });
+      const snapshot = await state.api.request("receivables.pay", {
+        id: payButton.dataset.id,
+      });
       await refreshSnapshot(snapshot);
       return;
     }
@@ -605,7 +615,9 @@ function attachEvents() {
       return;
     }
     const selected = event.target.selectedOptions[0];
-    const rentField = document.querySelector('#contract-form [name="rent_amount"]');
+    const rentField = document.querySelector(
+      '#contract-form [name="rent_amount"]'
+    );
     if (selected?.dataset?.rent && rentField) {
       rentField.value = selected.dataset.rent;
     }

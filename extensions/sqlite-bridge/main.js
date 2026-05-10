@@ -23,9 +23,9 @@ function reply(type, payload) {
         event: "backend:response",
         data: {
           type,
-          payload
-        }
-      }
+          payload,
+        },
+      },
     })
   );
 }
@@ -70,12 +70,12 @@ client.addEventListener("message", (event) => {
     const result = handleCommand(message.data.command, message.data.payload);
     reply("backend:success", {
       requestId: message.data.requestId,
-      result
+      result,
     });
   } catch (error) {
     reply("backend:error", {
       requestId: message.data.requestId,
-      message: error.message
+      message: error.message,
     });
   }
 });

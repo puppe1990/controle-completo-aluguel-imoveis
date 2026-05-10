@@ -7,7 +7,7 @@ describe("buildReceivablesSchedule", () => {
       start_date: "2026-01-01",
       end_date: "2026-03-31",
       due_day: 5,
-      rent_amount: 3200
+      rent_amount: 3200,
     });
 
     expect(schedule).toEqual([
@@ -15,20 +15,20 @@ describe("buildReceivablesSchedule", () => {
         reference_month: "2026-01",
         due_date: "2026-01-05",
         amount: 3200,
-        status: "pending"
+        status: "pending",
       },
       {
         reference_month: "2026-02",
         due_date: "2026-02-05",
         amount: 3200,
-        status: "pending"
+        status: "pending",
       },
       {
         reference_month: "2026-03",
         due_date: "2026-03-05",
         amount: 3200,
-        status: "pending"
-      }
+        status: "pending",
+      },
     ]);
   });
 
@@ -37,7 +37,7 @@ describe("buildReceivablesSchedule", () => {
       start_date: "2026-01-28",
       end_date: "2026-01-31",
       due_day: 5,
-      rent_amount: 900
+      rent_amount: 900,
     });
 
     expect(schedule).toEqual([
@@ -45,8 +45,8 @@ describe("buildReceivablesSchedule", () => {
         reference_month: "2026-01",
         due_date: "2026-01-28",
         amount: 900,
-        status: "pending"
-      }
+        status: "pending",
+      },
     ]);
   });
 });
